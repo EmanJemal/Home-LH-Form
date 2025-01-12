@@ -59,6 +59,7 @@ submitButton.addEventListener('click', () => {
         hour12: true
     };
     const ethiopianTime = new Intl.DateTimeFormat('en-US', options).format(date);
+    const nameOfRec = document.getElementById('passwordInput').value;
 
     const userData = {
         name,
@@ -71,7 +72,8 @@ submitButton.addEventListener('click', () => {
         selectedRoom,
         timestamp: ethiopianTime,
         bookedRooms,
-        bookings
+        bookings,
+        nameOfRec
     };
 
     showRemovePopup(userData);
@@ -81,9 +83,7 @@ submitButton.addEventListener('click', () => {
 // Submit Data to Firebase with Confirmation
 function handleSubmit(userData) {
     document.getElementById('confirmRemoveBtn').addEventListener('click', () => {
-        const password = document.getElementById('passwordInput').value;
 
-        if (password === '1234') {
             const customerRef = ref(database, 'customers');
             const newCustomerRef = push(customerRef); // Unique entry
 
@@ -103,9 +103,7 @@ function handleSubmit(userData) {
             if (userData.selectedRoom && userData.selectedRoom !== 'No room selected') {
                 updateRoomStatus(userData.selectedRoom);
             }
-        } else {
-            alert('Incorrect password. Please try again.');
-        }
+        
     });
 }
 

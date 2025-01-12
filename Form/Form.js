@@ -1,6 +1,6 @@
 import { database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
 
-
+/* localStorage.setItem('Entering Pin', 45284270810258310208532513043010152410200935993930) */
 const data = localStorage.getItem('Entering Pin');
 if(data != 45284270810258310208532513043010152410200935993930){
  document.body.innerHTML = '<h1>You are not allowed</h1>'
@@ -86,6 +86,7 @@ submitButton.addEventListener('click', () => {
     const finalDate = document.querySelector('.final-days-lable input').value;
     const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value;
     const amountInBirr = document.querySelector('.calculation .answer').innerHTML;
+    const nameOfRec = document.getElementById('passwordInput').innerHTML;
 
     // Identify selected room
     let selectedRoom = null;
@@ -128,7 +129,8 @@ submitButton.addEventListener('click', () => {
         timestamp: ethiopianTime,
         paymentMethod: selectedPayment,
         finalDate: finalDate,
-        amountInBirr: amountInBirr
+        amountInBirr: amountInBirr,
+        nameOfRec: nameOfRec
     }
 
     const paymentData = {
@@ -141,7 +143,8 @@ submitButton.addEventListener('click', () => {
         selectedRoom: selectedRoom,
         timestamp: ethiopianTime,
         paymentMethod: selectedPayment,
-        amountInBirr: amountInBirr
+        amountInBirr: amountInBirr,
+        nameOfRec: nameOfRec
     }
 
     showRemovePopup(userData);
@@ -149,9 +152,7 @@ submitButton.addEventListener('click', () => {
 
     document.getElementById('confirmRemoveBtn').addEventListener('click', ()=>{
 
-        const password = document.getElementById('passwordInput').value;
 
-        if (password === '1234') {
             // Push data to Firebase Realtime Database
             const customerRef = ref(database, 'customers');
             const newCustomerRef = push(customerRef); // Creates a new unique entry
@@ -224,10 +225,7 @@ submitButton.addEventListener('click', () => {
                     alert('Failed to submit customer payment information!');
                 });
 
-        }
-        else {
-            alert('Incorrect password. Please try again.');
-        }
+
     });
 
 });
