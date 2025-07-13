@@ -1,4 +1,4 @@
-.floors{
+.floors, .daily-amount{
     width: 90%;
     padding: 20px;
     height: fit-content;
@@ -11,6 +11,22 @@
 
     display: grid;
     grid-template-columns: repeat(1, 100%);
+}
+.daily-amount{
+}
+.daily-amount h1 {
+    color: #fc6b13;
+}
+.daily-amount button{
+    background-color: #fc6b13;
+    color: white;
+    font-weight: bold;
+    font-size: 25px;
+    border: none;
+    cursor: pointer;
+}
+.daily-amount button:hover{
+    background-color: #d3570a;
 }
 .floors div{
     margin-bottom: 30px;
@@ -28,6 +44,7 @@ li{
 .user-leaved:hover, .add-day:hover{
     color: #fc6b13;
 }
+
 /*organisation*/
 .org-floors{
     width: 90%;

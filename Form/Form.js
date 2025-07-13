@@ -10,11 +10,12 @@ if(data != 45284270810258310208532513043010152410200935993930){
 
 
 
-
 // Fetch the room types from Firebase and update the webpage
 document.addEventListener("DOMContentLoaded", function () {
     // Reference to the 'eachRoomPricing' node in Firebase
     const roomsRef = ref(database, 'eachRoomsPricing');
+
+    const input = document.querySelector('.name-of-days');
 
     // Fetch the room pricing data from 
     get(roomsRef)
@@ -79,7 +80,11 @@ document.querySelector('.days-lable').value = 1;
 
 submitButton.addEventListener('click', () => {
     // Fetch form values
+    const customerRef = ref(database, 'customers');
+    const newCustomerRef = push(customerRef); // push generates unique key
+    const customerId = newCustomerRef.key;      
     const name = document.querySelector('.name-lable input').value;
+    const salesname = document.querySelector('.sales-lable input').value;
     const age = document.querySelector('.age-lable input').value;
     const nationality = document.querySelector('.nationality-lable input').value;
     const dob = document.querySelector('.dob-lable input').value;
@@ -89,7 +94,8 @@ submitButton.addEventListener('click', () => {
     const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value;
     const amountInBirr = document.querySelector('.calculation .answer').innerHTML;
     const nameOfRec = document.getElementById('passwordInput').innerHTML;
-
+    // ✅ This is the true customer ID
+    
     // Identify selected room
     let selectedRoom = null;
     ['floor1', 'floor2', 'floor3', 'floor4'].forEach(floor => {
@@ -97,7 +103,6 @@ submitButton.addEventListener('click', () => {
         if (checkedRoom) selectedRoom = checkedRoom.value;
     });
     selectedRoom = selectedRoom || 'No room selected';
-
 
     const timestamp = Date.now();
     // Create a Date object
@@ -122,6 +127,7 @@ submitButton.addEventListener('click', () => {
         
     const userData = {
         name: name,
+        salesname: salesname,
         age: age,
         nationality: nationality,
         dob: dob,
@@ -132,13 +138,16 @@ submitButton.addEventListener('click', () => {
         paymentMethod: selectedPayment,
         finalDate: finalDate,
         amountInBirr: amountInBirr,
+        customerId: customerId,
         nameOfRec: nameOfRec
     }
 
     const paymentData = {
         name: name,
+        salesname: salesname,
         age: age,
         nationality: nationality,
+        customerId: customerId,
         dob: dob,
         sex: sex,
         days: days,
@@ -155,13 +164,9 @@ submitButton.addEventListener('click', () => {
     document.getElementById('confirmRemoveBtn').addEventListener('click', ()=>{
 
 
-            // Push data to Firebase Realtime Database
-            const customerRef = ref(database, 'customers');
-            const newCustomerRef = push(customerRef); // Creates a new unique entry
-            const customerKey = name.replace(/\s+/g, '_'); 
-
-            const userRef = ref(database, `customers/${customerKey}`);
-
+            
+            const userRef = ref(database, `customers/${customerId}`);
+            
             const timestamp = Date.now();
         // Create a Date object
             const date = new Date(timestamp);
@@ -216,7 +221,7 @@ submitButton.addEventListener('click', () => {
             const paymentRef = ref(database, 'Payments');
 
             // Create a reference for the new payment entry with the 7-digit random key
-            const amtRef = ref(database, `Payments/${randomKey}`);
+            const amtRef = ref(database, `Payments/${customerId}`);
 
             set(amtRef, paymentData)
                 .then(() => {

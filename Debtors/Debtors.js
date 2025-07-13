@@ -102,7 +102,7 @@ function showRemovePopup(customerId, roomNumber) {
     document.getElementById('confirmRemoveBtn').onclick = () => {
         const password = document.getElementById('passwordInput').value;
 
-        if (password === '1234') {
+        if (password === '151584') {
             removeCustomer(customerId, roomNumber); // Pass roomNumber here
             modal.style.display = 'none'; // Close the popup
         } else {
@@ -126,7 +126,10 @@ function removeCustomer(customerId, roomNumber) {
     const roomRef = ref(database, 'rooms/' + roomNumber); // Reference to the room
     
     // Update payment method for the customer
-    update(customerRef, { paymentMethod: 'Paid' })
+    const selectedValue = document.getElementById('payment-options').value;
+    console.log(selectedValue);
+
+    update(customerRef, { paymentMethod: selectedValue })
         .then(() => {
             // Find and update the corresponding payment entry
             return get(paymentsRef);
@@ -135,19 +138,16 @@ function removeCustomer(customerId, roomNumber) {
             if (snapshot.exists()) {
                 const payments = snapshot.val();
                 for (const paymentId in payments) {
-                    if (payments[paymentId].name === customerId) {
+                    if (payments[paymentId].customerId === customerId) {
                         const specificPaymentRef = ref(database, `Payments/${paymentId}`);
-                        return update(specificPaymentRef, { paymentMethod: 'Paid' });
+                        return update(specificPaymentRef, { paymentMethod: selectedValue });
                     }
+                    
                 }
                 throw new Error('No matching payment entry found for the customer');
             } else {
                 throw new Error('No payment records found');
             }
-        })
-        .then(() => {
-            // Remove the room entry after successful updates
-            return remove(roomRef);
         })
         .then(() => {
             console.log('Payment method updated, room removed successfully');
@@ -156,5 +156,8 @@ function removeCustomer(customerId, roomNumber) {
         .catch((error) => {
             console.error('Error updating payment method or removing room:', error);
         });
+
+
+        
     
 }

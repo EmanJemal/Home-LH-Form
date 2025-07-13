@@ -202,7 +202,7 @@ function showRemovePopup(customerId, roomNumber) {
     document.getElementById('confirmRemoveBtn').onclick = () => {
         const password = document.getElementById('passwordInput').value;
 
-        if (password === '1234') {
+        if (password === '151584') {
             removeCustomer(customerId, roomNumber); // Pass roomNumber here
             modal.style.display = 'none'; // Close the popup
         } else {
@@ -248,10 +248,6 @@ window.onload = loadCustomers;
 
 
 
-
-
-
-
 // Function to show the popup for password input
 function showRemovePopupORG(customerId, roomNumber, name) {
     const modal = document.getElementById('removeCustomerModal');
@@ -261,7 +257,7 @@ function showRemovePopupORG(customerId, roomNumber, name) {
     document.getElementById('confirmRemoveBtn').onclick = () => {
         const password = document.getElementById('passwordInput').value;
 
-        if (password === '1234') {
+        if (password === '1515') {
             removeCustomerORG(customerId, roomNumber, name); // Pass roomNumber here
             modal.style.display = 'none'; // Close the popup
         } else {
@@ -274,6 +270,76 @@ function showRemovePopupORG(customerId, roomNumber, name) {
         modal.style.display = 'none';
     };
 }
+
+// ... (your existing imports and Firebase config)
+
+const showBTN = document.querySelector(".show-btn");
+showBTN.addEventListener('click', () => {
+    const modal = document.getElementById('removeCustomerModal');
+    modal.style.display = 'block';
+
+    document.getElementById('confirmRemoveBtn').onclick = async () => {
+        const password = document.getElementById('passwordInput').value;
+
+        if (password === '151584') {
+            modal.style.display = 'none';
+
+            const containerDiv = document.querySelector('.daily-amount');
+            containerDiv.innerHTML = `
+                <label for="fromDate">From Date:</label>
+                <input type="datetime-local" id="fromDate" />
+                <label for="toDate">To Date:</label>
+                <input type="datetime-local" id="toDate" />
+                <button id="calculate">Calculate</button>
+                <div id="results"></div>
+            `;
+
+            document.getElementById("calculate").addEventListener("click", async () => {
+                const fromInput = document.getElementById("fromDate").value;
+                const toInput = document.getElementById("toDate").value;
+                const from = new Date(fromInput);
+                const to = new Date(toInput);
+            
+                if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+                    alert("Please select a valid date and time range");
+                    return;
+                }
+            
+                const paymentsSnap = await get(child(ref(database), 'Payments'));
+                let total = { Cash: 0, Telebirr: 0, CBE: 0, Dube: 0 };
+            
+                if (paymentsSnap.exists()) {
+                    paymentsSnap.forEach(snap => {
+                        const val = snap.val();
+                        const rawTimestamp = val.timestamp;
+                        const paymentDate = new Date(rawTimestamp.replace(' at ', ' ')); // ✅ Fix here
+                        const paymentMethod = val.paymentMethod?.toLowerCase();
+                        const amount = parseFloat(val.amountInBirr);
+            
+                        if (paymentDate >= from && paymentDate <= to && !isNaN(amount)) {
+                            if (paymentMethod.includes("cash")) total.Cash += amount;
+                            else if (paymentMethod.includes("telebirr")) total.Telebirr += amount;
+                            else if (paymentMethod.includes("cbe")) total.CBE += amount;
+                            else if (paymentMethod.includes("debtors")) total.Dube += amount;
+                        }
+                    });
+                }
+            
+                document.getElementById("results").innerHTML = `
+                    <div class="cash"><h1>Cash</h1><h2>${total.Cash} Birr</h2></div>
+                    <div class="cash"><h1>Telebirr</h1><h2>${total.Telebirr} Birr</h2></div>
+                    <div class="cash"><h1>CBE</h1><h2>${total.CBE} Birr</h2></div>
+                    <div class="cash"><h1>Dube</h1><h2>${total.Dube} Birr</h2></div>
+                `;
+            });
+            
+        } else {
+            alert('Incorrect password. Please try again.');
+        }
+    };
+});
+
+// ... (rest of your existing code remains unchanged)
 
 
 
@@ -303,3 +369,55 @@ function removeCustomerORG(customerId, roomNumber, name) {
             console.error('Error removing room booking:', error);
         });
 }
+
+document.getElementById('exportExcelBtn').addEventListener('click', async () => {
+    const customerSnapshot = await get(child(ref(database), 'customers'));
+    const orgSnapshot = await get(child(ref(database), 'organisation_room'));
+
+    const allData = [];
+
+    if (customerSnapshot.exists()) {
+      customerSnapshot.forEach((childSnap) => {
+        const c = childSnap.val();
+        allData.push({
+          Name: c.name,
+          Room: c.selectedRoom,
+          Days: c.days,
+          Payment: c.paymentMethod,
+          Start: c.timestamp,
+          End: c.finalDate,
+        });
+      });
+    }
+
+    if (orgSnapshot.exists()) {
+      orgSnapshot.forEach((childSnap) => {
+        const org = childSnap.val();
+        if (Array.isArray(org.bookings)) {
+          org.bookings.forEach((booking) => {
+            allData.push({
+              Name: booking.name + ' (ORG: ' + org.name + ")",
+              Room: booking.room,
+              Days: org.days,
+              Payment: org.paymentMethod,
+              Start: org.startDate,
+              End: org.endDate,
+            });
+          });
+        }
+      });
+    }
+
+    if (allData.length === 0) {
+      alert("No customer data found to export.");
+      return;
+    }
+
+    // Convert data to worksheet and workbook
+    const worksheet = XLSX.utils.json_to_sheet(allData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+
+    // Trigger download
+    XLSX.writeFile(workbook, 'All_Customers.xlsx');
+  });

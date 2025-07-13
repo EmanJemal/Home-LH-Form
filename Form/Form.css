@@ -11,6 +11,7 @@
 }
 .rooms_reserved li{
     font-weight: bold;
+    font-size: 20px;
 }
 .rooms_reserved{
     display: grid;
