@@ -42,8 +42,13 @@ a{
     height: fit-content;
     background-color: #67a8df;
     border-radius: 50px;
-    color: white;
+    color: white;  
 }
+.total-money-made-month div {
+    margin-bottom: 5px;
+    font-size: 1.2rem;
+}
+
 .total-money-made-day{
     width: 350px;
     height: 160px;

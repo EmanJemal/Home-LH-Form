@@ -119,7 +119,6 @@ onValue(paymentsRef, (snapshot) => {
 
 
 
-/* Custom Timestamp Parser */
 function parseCustomTimestamp(timestamp) {
     const regex = /([a-zA-Z]+) (\d{1,2}), (\d{4}) at (\d{1,2}):(\d{2}):(\d{2}) (AM|PM)/;
     const match = timestamp.match(regex);
@@ -131,19 +130,18 @@ function parseCustomTimestamp(timestamp) {
         let hour = parseInt(match[4], 10);
         const minute = parseInt(match[5], 10);
         const second = parseInt(match[6], 10);
-        const period = match[7];  // AM or PM
+        const period = match[7]; // AM or PM
 
-        // Convert 12-hour format to 24-hour format
         if (period === 'PM' && hour < 12) hour += 12;
         if (period === 'AM' && hour === 12) hour = 0;
 
-        // Create a JavaScript Date object
-        const month = new Date(Date.parse(`${monthStr} 1, 2024`)).getMonth();  // Convert month name to number
+        const month = new Date(Date.parse(`${monthStr} 1, 2024`)).getMonth(); 
         return new Date(year, month, day, hour, minute, second);
     } else {
         console.error('Invalid timestamp format:', timestamp);
     }
 }
+
 
 
 
