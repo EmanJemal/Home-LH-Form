@@ -316,7 +316,7 @@ daysInput.addEventListener('input', () => {
     lengthOfStay.textContent = `* ${days}`;
     const finalAmt = totalAmount + extra;
 
-    answerBrr.querySelector('.answer').textContent = `${finalAmt} Birr`;
+    answerBrr.querySelector('.answer').textContent = `${finalAmt}`;
 });
 
 
@@ -329,7 +329,7 @@ extra_listner.addEventListener('input', () => {
     lengthOfStay.textContent = `* ${days}`;
     const finalAmt = totalAmount + extra;
 
-    answerBrr.querySelector('.answer').textContent = `${finalAmt} Birr`;
+    answerBrr.querySelector('.answer').textContent = `${finalAmt}`;
 });
 
 
@@ -391,7 +391,7 @@ function recalculateFinalAmount() {
 
     const total = (price * days) + extra;
     document.querySelector('.length-of-stay').textContent = `* ${days}`;
-    document.querySelector('.answer-brr .answer').textContent = `${total} Birr`;
+    document.querySelector('.answer-brr .answer').textContent = `${total}`;
 }
 
 
