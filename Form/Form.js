@@ -102,7 +102,11 @@ submitButton.addEventListener('click', () => {
         const checkedRoom = document.querySelector(`input[name="${floor}"]:checked`);
         if (checkedRoom) selectedRoom = checkedRoom.value;
     });
-    selectedRoom = selectedRoom || 'No room selected';
+    
+    if (!name || !salesname || !days || !finalDate || !selectedRoom || !selectedPayment) {
+        alert("Please fill in all required fields:\n- Name\n- Sales Name\n- Days\n- Final Date\n- Room Selection\n- Payment Method");
+        return; // stop further execution
+    }
 
     const timestamp = Date.now();
     // Create a Date object
