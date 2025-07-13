@@ -30,6 +30,7 @@ function loadCustomers() {
                     const startingDate = customer.timestamp;
                     const paymentMethod = customer.paymentMethod;
                     const customerName = customer.name;
+                    const amt = customer.amountInBirr;
                     const customerId = childSnapshot.key; // Get the customer ID
                 
                     let formattedDate = 'N/A';
@@ -112,7 +113,7 @@ function loadCustomers() {
                             <i class="fa-solid fa-arrow-right fa-arrow-margin"></i>
                             <span class="starting-date">${startingDate}</span>
                             <i class="fa-solid fa-arrow-right fa-arrow-margin"></i>
-                            <span class="ending-date">${formattedDate}</span>
+                            <span class="ending-date">${amt} Birr</span>
                             <span class="user-leaved"><i class="fa-solid fa-user-xmark"></i></span>
                             ${exittime}
                         `;
