@@ -39,7 +39,7 @@ a{
 }
 .total-money-made-month{
     width: 350px;
-    height: 160px;
+    height: fit-content;
     background-color: #67a8df;
     border-radius: 50px;
     color: white;

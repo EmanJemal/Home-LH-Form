@@ -62,12 +62,18 @@ onValue(customersRef, (snapshot) => {
 
 
 
-
-/* Calculate Monthly Revenue */
+/* Calculate Monthly Revenue by Payment Method */
 onValue(paymentsRef, (snapshot) => {
     if (snapshot.exists()) {
         const paymentsData = snapshot.val();
-        let monthlyRevenue = 0;
+
+        // Initialize totals by method
+        let total = {
+            Cash: 0,
+            Telebirr: 0,
+            CBE: 0,
+            Dube: 0
+        };
 
         // Get current year and month
         const currentDate = new Date();
@@ -76,35 +82,41 @@ onValue(paymentsRef, (snapshot) => {
 
         for (const paymentId in paymentsData) {
             const payment = paymentsData[paymentId];
-            const { amountInBirr, timestamp } = payment;
+            const rawTimestamp = payment.timestamp;
+            const amount = parseFloat(payment.amountInBirr);
+            const method = (payment.paymentMethod || '').toLowerCase();
 
-            if (amountInBirr && timestamp) {
-                const paymentDate = parseCustomTimestamp(timestamp);
+            const paymentDate = parseCustomTimestamp(rawTimestamp);
 
-                if (!isNaN(paymentDate)) {
-                    const paymentYear = paymentDate.getFullYear();
-                    const paymentMonth = paymentDate.getMonth() + 1;
-
-                    // Check if the payment was made in the current month and year
-                    if (paymentYear === currentYear && paymentMonth === currentMonth) {
-                        monthlyRevenue += Number(amountInBirr);
-                    }
-                } else {
-                    console.warn(`Invalid date format for payment ID: ${paymentId}`);
-                }
+            if (
+                paymentDate &&
+                paymentDate.getFullYear() === currentYear &&
+                paymentDate.getMonth() + 1 === currentMonth &&
+                !isNaN(amount)
+            ) {
+                if (method.includes('cash')) total.Cash += amount;
+                else if (method.includes('telebirr')) total.Telebirr += amount;
+                else if (method.includes('cbe')) total.CBE += amount;
+                else if (method.includes('debtors') || method.includes('dube')) total.Dube += amount;
             }
         }
 
-        // Update the monthly revenue on the admin panel
-        monthlyRevenueElement.textContent = `${monthlyRevenue.toLocaleString()} Birr`;
+        // Show results in the monthly box
+        monthlyRevenueElement.innerHTML = `
+            <div><strong>Cash:</strong> ${total.Cash.toLocaleString()} Birr</div>
+            <div><strong>Telebirr:</strong> ${total.Telebirr.toLocaleString()} Birr</div>
+            <div><strong>CBE:</strong> ${total.CBE.toLocaleString()} Birr</div>
+            <div><strong>Dube:</strong> ${total.Dube.toLocaleString()} Birr</div>
+        `;
     } else {
         console.warn("No payment data found for this month.");
-        monthlyRevenueElement.textContent = '0 Birr';
+        monthlyRevenueElement.innerHTML = '0 Birr';
     }
 }, (error) => {
     console.error("Error fetching payment data: ", error);
-    monthlyRevenueElement.textContent = 'Error';
+    monthlyRevenueElement.innerHTML = 'Error';
 });
+
 
 
 /* Custom Timestamp Parser */
@@ -340,8 +352,11 @@ days.forEach(day => {
                                     <h3 class="date">${payment.timestamp}</h3>
                                     <p><strong> Sex:</strong><strong class="color-blue"> ${payment.sex}</strong></p>
                                     <p><strong> Original Length of stay:</strong> <strong class="color-blue">${payment.days} Days</strong></p>
+                                    <p><strong> Payment Method:</strong><strong class="color-blue"> ${payment.paymentMethod}</strong></p>
                                     <p><strong> Amount:</strong> <strong class="color-blue">${payment.amountInBirr} Birr</strong></p>
                                     <p><strong> Registration by:</strong> <strong class="color-blue">${payment.salesname}</strong></p>
+                                    <p><strong> Phone:</strong><strong class="color-blue"> ${payment.phone}</strong></p>
+
                                 </div>`;
                         document.querySelector('.rooms').innerHTML += HTML
 
