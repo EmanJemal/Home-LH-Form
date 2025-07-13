@@ -275,6 +275,45 @@ function showRemovePopupORG(customerId, roomNumber, name) {
 
 const showBTN = document.querySelector(".show-btn");
 
+function parseCustomDate(dateStr) {
+    try {
+        const [datePart, timePart] = dateStr.split(' at ');
+        if (!datePart || !timePart) {
+            console.warn("parseCustomDate: Missing date or time in:", dateStr);
+            return null;
+        }
+
+        const parsedDate = new Date(`${datePart} ${timePart}`);
+        if (isNaN(parsedDate.getTime())) {
+            console.warn("parseCustomDate: Could not parse:", dateStr);
+            return null;
+        }
+
+        return parsedDate;
+    } catch (err) {
+        console.warn("parseCustomDate error:", err.message, "for", dateStr);
+        return null;
+    }
+}
+
+
+
+function convertTo24Hour(timeStr) {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes, seconds] = time.split(':');
+
+    hours = parseInt(hours, 10);
+
+    if (modifier === 'PM' && hours < 12) {
+        hours += 12;
+    } else if (modifier === 'AM' && hours === 12) {
+        hours = 0;
+    }
+
+    return `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`;
+}
+
+
 showBTN.addEventListener('click', () => {
     const modal = document.getElementById('removeCustomerModal');
     modal.style.display = 'block';
@@ -300,7 +339,8 @@ showBTN.addEventListener('click', () => {
                 const toInput = document.getElementById("toDate").value;
                 const from = new Date(fromInput);
                 const to = new Date(toInput);
-
+                to.setHours(23, 59, 59, 999);  // Ensure it includes the whole day
+                
                 if (isNaN(from.getTime()) || isNaN(to.getTime())) {
                     alert("Please select a valid date and time range");
                     return;
@@ -313,16 +353,34 @@ showBTN.addEventListener('click', () => {
                     paymentsSnap.forEach(snap => {
                         const val = snap.val();
                         const rawTimestamp = val.timestamp;
-                        const paymentDate = new Date(rawTimestamp.replace(' at ', ' '));
+                        const paymentDate = parseCustomDate(rawTimestamp);
                         const paymentMethod = val.paymentMethod?.toLowerCase();
                         const amount = parseFloat(val.amountInBirr);
 
-                        if (paymentDate >= from && paymentDate <= to && !isNaN(amount)) {
+                        if (
+                            paymentDate &&
+                            paymentDate.getTime() >= from.getTime() &&
+                            paymentDate.getTime() <= to.getTime() &&
+                            !isNaN(amount)
+                          ) {
                             if (paymentMethod.includes("cash")) total.Cash += amount;
                             else if (paymentMethod.includes("telebirr")) total.Telebirr += amount;
                             else if (paymentMethod.includes("cbe")) total.CBE += amount;
                             else if (paymentMethod.includes("debtors")) total.Dube += amount;
-                        }
+                          } 
+                            else {
+                                console.warn("Skipping entry due to:");
+                                if (!paymentDate) console.warn("Invalid date:", rawTimestamp);
+                                else if (isNaN(amount)) console.warn("Invalid amount:", val.amountInBirr);
+                                else if (paymentDate.getTime() < from.getTime()) {
+                                  console.warn("Date too early:", paymentDate.toISOString(), "<", from.toISOString());
+                                }
+                                else if (paymentDate.getTime() > to.getTime()) {
+                                  console.warn("Date too late:", paymentDate.toISOString(), ">", to.toISOString());
+                                }
+                              
+                                                        }
+                          
                     });
                 }
 
@@ -345,6 +403,7 @@ showBTN.addEventListener('click', () => {
                             Room: c.selectedRoom,
                             Days: c.days,
                             Payment: c.paymentMethod,
+                            amount: c.amountInBirr,
                             Start: c.timestamp,
                             End: c.finalDate,
                         });

@@ -200,6 +200,7 @@ submitButton.addEventListener('click', () => {
             set(userRef, userData)
             .then(() => {
                 alert('Customer information submitted successfully!');
+                window.location.href('./')
                 // Optionally clear the form
                 document.querySelectorAll('input').forEach(input => input.value = '');
                 document.querySelector('#sex-options').value = 'None';
