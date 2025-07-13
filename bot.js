@@ -110,13 +110,18 @@ app.get('/telegram-image/:fileId', async (req, res) => {
   }
 });
 
-// 🔁 Start Server + Webhook Setup
+// Attach webhook handler middleware BEFORE listen
+app.use(bot.webhookCallback('/webhook'));
+
 app.listen(PORT, async () => {
   const webhookURL = `https://home-lh-form-production.up.railway.app/webhook`;
 
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  await bot.telegram.setWebhook(webhookURL);
-  app.use(bot.webhookCallback('/webhook'));
 
-  console.log("🤖 Telegram bot webhook set:", webhookURL);
+  try {
+    await bot.telegram.setWebhook(webhookURL);
+    console.log("🤖 Telegram bot webhook set:", webhookURL);
+  } catch (err) {
+    console.error("Failed to set webhook:", err);
+  }
 });
