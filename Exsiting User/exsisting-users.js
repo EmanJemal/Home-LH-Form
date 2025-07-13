@@ -271,7 +271,6 @@ function showRemovePopupORG(customerId, roomNumber, name) {
     };
 }
 
-// ... (your existing imports and Firebase config)
 
 const showBTN = document.querySelector(".show-btn");
 
@@ -391,42 +390,38 @@ showBTN.addEventListener('click', () => {
                     <div class="cash"><h1>Dube</h1><h2>${total.Dube} Birr</h2></div>
                 `;
 
-                const customerSnapshot = await get(child(ref(database), 'customers'));
-                const orgSnapshot = await get(child(ref(database), 'organisation_room'));
                 const allData = [];
 
-                if (customerSnapshot.exists()) {
-                    customerSnapshot.forEach((childSnap) => {
-                        const c = childSnap.val();
-                        allData.push({
-                            Name: c.name,
-                            Room: c.selectedRoom,
-                            Days: c.days,
-                            Payment: c.paymentMethod,
-                            amount: c.amountInBirr,
-                            Start: c.timestamp,
-                            End: c.finalDate,
-                        });
-                    });
-                }
+                if (paymentsSnap.exists()) {
+                    paymentsSnap.forEach((snap) => {
+                        const val = snap.val();
+                        const rawTimestamp = val.timestamp;
+                        const paymentDate = parseCustomDate(rawTimestamp);
+                        const amount = parseFloat(val.amountInBirr);
+                        const paymentMethod = val.paymentMethod;
 
-                if (orgSnapshot.exists()) {
-                    orgSnapshot.forEach((childSnap) => {
-                        const org = childSnap.val();
-                        if (Array.isArray(org.bookings)) {
-                            org.bookings.forEach((booking) => {
-                                allData.push({
-                                    Name: booking.name + ' (ORG: ' + org.name + ")",
-                                    Room: booking.room,
-                                    Days: org.days,
-                                    Payment: org.paymentMethod,
-                                    Start: org.startDate,
-                                    End: org.endDate,
-                                });
+                        if (
+                            paymentDate &&
+                            paymentDate.getTime() >= from.getTime() &&
+                            paymentDate.getTime() <= to.getTime() &&
+                            !isNaN(amount)
+                        ) {
+                            allData.push({
+                                Name: val.name || "N/A",
+                                Room: val.selectedRoom || "N/A",
+                                Amount: amount + ' Birr',
+                                Timestamp: val.timestamp || "N/A",
+                                salesname: val.salesname,
+                                sex: val.sex,
+                                days: val.days,
+                                selectedRoom: val.selectedRoom,
+                                paymentMethod: paymentMethod,
+                                phone: val.phone,
                             });
                         }
                     });
                 }
+
 
                 const dateDiffInMs = to - from;
                 const diffInDays = dateDiffInMs / (1000 * 60 * 60 * 24);

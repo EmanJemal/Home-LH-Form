@@ -200,10 +200,10 @@ submitButton.addEventListener('click', () => {
             set(userRef, userData)
             .then(() => {
                 alert('Customer information submitted successfully!');
-                window.location.href('./')
+                location.reload();
                 // Optionally clear the form
                 document.querySelectorAll('input').forEach(input => input.value = '');
-                document.querySelector('#sex-options').value = 'None';
+                document.querySelector('#sex-options').value = 'male';
             })
             .catch((error) => {
                 console.error('Error saving data: ', error);
