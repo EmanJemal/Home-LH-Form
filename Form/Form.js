@@ -304,20 +304,33 @@ const daysInput = document.querySelector('.days-lable input');
 const amountInBirr = document.querySelector('.amount-in-birr');
 const lengthOfStay = document.querySelector('.length-of-stay');
 const answerBrr = document.querySelector('.answer-brr');
-
-// Define the price per day (for example, 2250 Birr per day)
-const pricePerDay = 220;
+const extra_listner = document.querySelector('.extra-lable input');
 
 // Update the amount based on the number of days selected
 daysInput.addEventListener('input', () => {
-    const days = parseInt(daysInput.value) || 1; // Default to 1 if no input or invalid value
-    const totalAmount = pricePerDay * days;
-    
-    // Update the calculation display
+    const days = parseInt(daysInput.value) || 1;
+    const amount = parseFloat(document.querySelector('.amount-in-birr').textContent) || 0;
+    const totalAmount = amount * days;
+    const extra = parseFloat(document.querySelector('.extra-lable input').value) || 0;
+
     lengthOfStay.textContent = `* ${days}`;
-    answerBrr.querySelector('.answer').textContent = `${totalAmount} Birr`;
+    const finalAmt = totalAmount + extra;
+
+    answerBrr.querySelector('.answer').textContent = `${finalAmt} Birr`;
 });
 
+
+extra_listner.addEventListener('input', () => {
+    const days = parseInt(daysInput.value) || 1;
+    const amount = parseFloat(document.querySelector('.amount-in-birr').textContent) || 0;
+    const totalAmount = amount * days;
+    const extra = parseFloat(document.querySelector('.extra-lable input').value) || 0;
+
+    lengthOfStay.textContent = `* ${days}`;
+    const finalAmt = totalAmount + extra;
+
+    answerBrr.querySelector('.answer').textContent = `${finalAmt} Birr`;
+});
 
 
 
@@ -371,6 +384,15 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
 
 
+function recalculateFinalAmount() {
+    const days = parseInt(document.querySelector('.days-lable input').value) || 1;
+    const price = parseFloat(document.querySelector('.amount-in-birr').textContent) || 0;
+    const extra = parseFloat(document.querySelector('.extra-lable input').value) || 0;
+
+    const total = (price * days) + extra;
+    document.querySelector('.length-of-stay').textContent = `* ${days}`;
+    document.querySelector('.answer-brr .answer').textContent = `${total} Birr`;
+}
 
 
 
@@ -378,76 +400,14 @@ window.addEventListener('DOMContentLoaded', (event) => {
 /* Price calc */
 document.querySelectorAll('.floor-input').forEach(input => {
     input.addEventListener('change', () => {
-        const nextElement = input.nextElementSibling;
-        const nextTwo = nextElement.nextElementSibling;
-        const priceElement = nextTwo.nextElementSibling?.nextElementSibling;
-        let finalPrice;
-        let finalDay;
+        const priceElement = input.closest('li').querySelector('.price');
+        const price = parseFloat(priceElement?.textContent) || 0;
 
-        console.log(nextTwo); // Log the next sibling element of the input
-        
-        if (nextTwo && nextTwo.textContent.trim() === 'Deluxe') {
-            console.log(nextTwo.nextElementSibling);
-            console.log(priceElement)
-            console.log(priceElement.textContent)
+        // Set the current price
+        document.querySelector('.amount-in-birr').textContent = price;
 
-            document.querySelector('.amount-in-birr').textContent = priceElement.textContent;
-            finalPrice = priceElement.textContent;
-
-            const dayInputChange = document.querySelector('.days-lable input')
-            document.querySelector('.answer').innerHTML = priceElement.textContent * dayInputChange.value;
-        }
-
-        else if (nextTwo && nextTwo.textContent.trim() === 'Standard') {
-            console.log(nextTwo.nextElementSibling);
-            console.log(priceElement)
-            console.log(priceElement.textContent)
-
-            document.querySelector('.amount-in-birr').textContent = priceElement.textContent;
-            finalPrice = priceElement.textContent;
-        
-            const dayInputChange = document.querySelector('.days-lable input')
-            document.querySelector('.answer').innerHTML = priceElement.textContent * dayInputChange.value;
-        }
-        else if (nextTwo && nextTwo.textContent.trim() === 'Single') {
-            console.log(nextTwo.nextElementSibling);
-            console.log(priceElement)
-            console.log(priceElement.textContent)
-
-            document.querySelector('.amount-in-birr').textContent = priceElement.textContent;
-            finalPrice = priceElement.textContent;
-
-            const dayInputChange = document.querySelector('.days-lable input')
-            document.querySelector('.answer').innerHTML = priceElement.textContent * dayInputChange.value;
-        }
-        else if (nextTwo && nextTwo.textContent.trim() === 'Double') {
-            console.log(nextTwo.nextElementSibling);
-            console.log(priceElement)
-            console.log(priceElement.textContent)
-
-            document.querySelector('.amount-in-birr').textContent = priceElement.textContent;
-            finalPrice = priceElement.textContent;
-
-            const dayInputChange = document.querySelector('.days-lable input')
-            document.querySelector('.answer').innerHTML = priceElement.textContent * dayInputChange.value;
-        }
-
-
-        const days = document.querySelector('.name-of-days');
-        days.addEventListener('input', () => {
-            // Get the value of the input
-            const daysValue = days.value;
-            
-            // Set the innerHTML of the '.length-of-stay' element to the value of 'days'
-            document.querySelector('.length-of-stay').innerHTML = daysValue;
-        
-            // Assuming 'finalPrice' is already defined somewhere
-            finalDay = daysValue; // Store the input value
-        
-            // Assuming 'finalPrice' is a number, calculate the total answer
-            document.querySelector('.answer').innerHTML = daysValue * finalPrice;
-        });
-        
+        // Recalculate final amount based on new price
+        recalculateFinalAmount();
     });
 });
 
