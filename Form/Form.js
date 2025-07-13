@@ -84,10 +84,10 @@ submitButton.addEventListener('click', () => {
     const newCustomerRef = push(customerRef); // push generates unique key
     const customerId = newCustomerRef.key;      
     const name = document.querySelector('.name-lable input').value;
+    const phone = document.querySelector('.phone-lable input').value;
     const salesname = document.querySelector('.sales-lable input').value;
     const age = document.querySelector('.age-lable input').value;
     const nationality = document.querySelector('.nationality-lable input').value;
-    const dob = document.querySelector('.dob-lable input').value;
     const sex = document.querySelector('#sex-options').value;
     const days = document.querySelector('.days-lable input').value;
     const finalDate = document.querySelector('.final-days-lable input').value;
@@ -130,7 +130,6 @@ submitButton.addEventListener('click', () => {
         salesname: salesname,
         age: age,
         nationality: nationality,
-        dob: dob,
         sex: sex,
         days: days,
         selectedRoom: selectedRoom,
@@ -139,7 +138,8 @@ submitButton.addEventListener('click', () => {
         finalDate: finalDate,
         amountInBirr: amountInBirr,
         customerId: customerId,
-        nameOfRec: nameOfRec
+        nameOfRec: nameOfRec,
+        phone: phone,
     }
 
     const paymentData = {
@@ -148,14 +148,14 @@ submitButton.addEventListener('click', () => {
         age: age,
         nationality: nationality,
         customerId: customerId,
-        dob: dob,
         sex: sex,
         days: days,
         selectedRoom: selectedRoom,
         timestamp: ethiopianTime,
         paymentMethod: selectedPayment,
         amountInBirr: amountInBirr,
-        nameOfRec: nameOfRec
+        nameOfRec: nameOfRec,
+        phone: phone,
     }
 
     showRemovePopup(userData);
@@ -462,7 +462,6 @@ function showRemovePopup(userData) {
 
     document.querySelector('.information-customer .name').innerHTML = userData.name;
     document.querySelector('.information-customer .age').innerHTML = userData.age;
-    document.querySelector('.information-customer .date-of-birth').innerHTML = userData.dob;
     document.querySelector('.information-customer .final-date').innerHTML = userData.finalDate;
     document.querySelector('.information-customer .payment-method').innerHTML = userData.selectedPayment;
     document.querySelector('.information-customer .room').innerHTML = userData.selectedRoom;

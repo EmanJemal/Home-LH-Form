@@ -428,10 +428,19 @@ showBTN.addEventListener('click', () => {
                     });
                 }
 
-                if (allData.length === 0) {
-                    alert("No customer data found to export.");
+                const dateDiffInMs = to - from;
+                const diffInDays = dateDiffInMs / (1000 * 60 * 60 * 24);
+
+                const allAmountsZero = total.Cash === 0 && total.Telebirr === 0 && total.CBE === 0 && total.Dube === 0;
+
+                if (allData.length === 0 && allAmountsZero) {
+                    alert("No data found in the selected range.");
                     return;
                 }
+                else if (diffInDays > 3) {
+                    alert("more than 3 days")
+                }
+
 
                 // ➕ Add totals at the end of Excel
                 allData.push({});
@@ -444,8 +453,15 @@ showBTN.addEventListener('click', () => {
                 const worksheet = XLSX.utils.json_to_sheet(allData);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
-                XLSX.writeFile(workbook, 'All_Customers.xlsx');
-            });
+                const today = new Date();
+                const months = [
+                  "jan", "feb", "mar", "apr", "may", "jun",
+                  "jul", "aug", "sep", "oct", "nov", "dec"
+                ];
+                const fileName = `report_${months[today.getMonth()]}_${today.getDate()}_${today.getFullYear()}.xlsx`;
+                
+                XLSX.writeFile(workbook, fileName);
+                });
 
         } else {
             alert('Incorrect password. Please try again.');
