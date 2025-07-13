@@ -257,7 +257,7 @@ function showRemovePopupORG(customerId, roomNumber, name) {
     document.getElementById('confirmRemoveBtn').onclick = () => {
         const password = document.getElementById('passwordInput').value;
 
-        if (password === '1515') {
+        if (password === '151584') {
             removeCustomerORG(customerId, roomNumber, name); // Pass roomNumber here
             modal.style.display = 'none'; // Close the popup
         } else {
