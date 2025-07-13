@@ -371,53 +371,5 @@ function removeCustomerORG(customerId, roomNumber, name) {
 }
 
 document.getElementById('exportExcelBtn').addEventListener('click', async () => {
-    const customerSnapshot = await get(child(ref(database), 'customers'));
-    const orgSnapshot = await get(child(ref(database), 'organisation_room'));
-
-    const allData = [];
-
-    if (customerSnapshot.exists()) {
-      customerSnapshot.forEach((childSnap) => {
-        const c = childSnap.val();
-        allData.push({
-          Name: c.name,
-          Room: c.selectedRoom,
-          Days: c.days,
-          Payment: c.paymentMethod,
-          Start: c.timestamp,
-          End: c.finalDate,
-        });
-      });
-    }
-
-    if (orgSnapshot.exists()) {
-      orgSnapshot.forEach((childSnap) => {
-        const org = childSnap.val();
-        if (Array.isArray(org.bookings)) {
-          org.bookings.forEach((booking) => {
-            allData.push({
-              Name: booking.name + ' (ORG: ' + org.name + ")",
-              Room: booking.room,
-              Days: org.days,
-              Payment: org.paymentMethod,
-              Start: org.startDate,
-              End: org.endDate,
-            });
-          });
-        }
-      });
-    }
-
-    if (allData.length === 0) {
-      alert("No customer data found to export.");
-      return;
-    }
-
-    // Convert data to worksheet and workbook
-    const worksheet = XLSX.utils.json_to_sheet(allData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
-
-    // Trigger download
-    XLSX.writeFile(workbook, 'All_Customers.xlsx');
+   
   });
