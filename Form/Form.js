@@ -1,11 +1,11 @@
 import { database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
 
- localStorage.setItem('Entering Pin', 45284270810258310208532513043010152410200935993930) 
-/*
+ //localStorage.setItem('Entering Pin', 45284270810258310208532513043010152410200935993930) 
+
 const data = localStorage.getItem('Entering Pin');
 if(data != 45284270810258310208532513043010152410200935993930){
  document.body.innerHTML = '<h1>You are not allowed</h1>'
-}*/
+}
 
 
 

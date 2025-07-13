@@ -1,9 +1,9 @@
 import { database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
-/*
+
 const data = localStorage.getItem('Entering Pin');
 if(data != 45284270810258310208532513043010152410200935993930){
  document.body.innerHTML = '<h1>You are not allowed</h1>'
-}*/
+}
 
 // Reference to the database
 const dbRef = ref(database);
