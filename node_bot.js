@@ -1,7 +1,18 @@
 import TelegramBot from 'node-telegram-bot-api';
-import { database } from './firebase.js';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getDatabase } from 'firebase-admin/database';
 import dotenv from 'dotenv';
 dotenv.config();
+
+const serviceAccountBase64 = process.env.FIREBASE_CONFIG_BASE64;
+const decodedServiceAccount = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf8'));
+
+initializeApp({
+  credential: cert(decodedServiceAccount),
+  databaseURL: "https://your-firebase-project.firebaseio.com" // your DB url here
+});
+
+export const database = getDatabase();
 
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 
