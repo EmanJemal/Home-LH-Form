@@ -339,7 +339,6 @@ showBTN.addEventListener('click', () => {
                 const toInput = document.getElementById("toDate").value;
                 const from = new Date(fromInput);
                 const to = new Date(toInput);
-                to.setHours(23, 59, 59, 999);  // Ensure it includes the whole day
                 
                 if (isNaN(from.getTime()) || isNaN(to.getTime())) {
                     alert("Please select a valid date and time range");
@@ -466,7 +465,6 @@ showBTN.addEventListener('click', () => {
 });
 
 
-// ... (rest of your existing code remains unchanged)
 
 
 
