@@ -9,7 +9,7 @@ const decodedServiceAccount = JSON.parse(Buffer.from(serviceAccountBase64, 'base
 
 initializeApp({
   credential: cert(decodedServiceAccount),
-  databaseURL: "https://your-firebase-project.firebaseio.com" // your DB url here
+  databaseURL: "https://home-land-hotel-default-rtdb.firebaseio.com" // your DB url here
 });
 
 export const database = getDatabase();
