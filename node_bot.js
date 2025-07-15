@@ -457,7 +457,7 @@ bot.on('callback_query', async (query) => {
     await bot.sendMessage(chatId, `🛑 Forced end for ${salesName}'s session (ID: ${timerId})`);
   }
 });
-const historySessions = {}; // chatId -> state
+const historySessions = {}; // For session state per chat
 bot.onText(/\/history/, async (msg) => {
   const chatId = msg.chat.id;
 
@@ -465,106 +465,85 @@ bot.onText(/\/history/, async (msg) => {
     return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
   }
 
-  historySessions[chatId] = { step: 'awaiting_timer_id' };
-  bot.sendMessage(chatId, "🔎 Please enter the *Timer ID* you want to check history for:", { parse_mode: "Markdown" });
+  historySessions[chatId] = { step: 'awaiting_timer_ids' };
+  bot.sendMessage(chatId, "🔍 Please enter one or more *Timer IDs*, separated by commas (e.g. `1234, 3554`):", {
+    parse_mode: "Markdown"
+  });
 });
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
+  const text = msg.text?.trim();
 
   if (msg.text.startsWith('/') || chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) return;
 
   const session = historySessions[chatId];
-  if (!session) return;
+  if (!session || session.step !== 'awaiting_timer_ids') return;
 
-  if (session.step === 'awaiting_timer_id') {
-    const timerId = msg.text.trim();
-    session.timerId = timerId;
-    session.step = 'confirm_single_id';
+  // ✅ Parse multiple timer IDs
+  const timerIds = text.split(',').map(id => id.trim()).filter(Boolean);
+  if (timerIds.length === 0) {
+    return bot.sendMessage(chatId, "❌ Invalid input. Please enter at least one valid Timer ID.");
+  }
 
-    return bot.sendMessage(chatId, `🆔 You entered Timer ID: *${timerId}*\n\nIs this the only ID to check?`, {
-      parse_mode: "Markdown",
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "✅ Yes", callback_data: `history_confirm_yes_${timerId}` }],
-          [{ text: "❌ Cancel", callback_data: `history_cancel` }]
-        ]
+  delete historySessions[chatId]; // Clear session
+
+  const paymentsSnap = await database.ref('Payments').once('value');
+
+  let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+  const allData = [];
+
+  if (paymentsSnap.exists()) {
+    paymentsSnap.forEach((snap) => {
+      const val = snap.val();
+      if (val.timeid && timerIds.includes(val.timeid)) {
+        const amount = parseFloat(val.amountInBirr) || 0;
+        const method = val.paymentMethod?.toLowerCase() || '';
+
+        if (method.includes('cbe')) totalCBE += amount;
+        else if (method.includes('cash')) totalCash += amount;
+        else if (method.includes('telebirr')) totalTelebirr += amount;
+
+        allData.push({
+          Name: val.name || "N/A",
+          Room: val.selectedRoom || "N/A",
+          Amount: amount + ' Birr',
+          Timestamp: val.timestamp || "N/A",
+          salesname: val.salesname,
+          sex: val.sex,
+          days: val.days,
+          paymentMethod: val.paymentMethod,
+          phone: val.phone,
+          TimerID: val.timeid,
+        });
       }
     });
   }
-});
-bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const data = query.data;
-  await bot.answerCallbackQuery(query.id); // clear button loading
 
-  if (!data.startsWith("history_")) return;
+  // ✅ Send summary
+  await bot.sendMessage(chatId, `📊 *Combined Summary for Timer IDs: ${timerIds.join(', ')}*\n\n💵 Cash: *${totalCash} Birr*\n🏦 CBE: *${totalCBE} Birr*\n📱 Telebirr: *${totalTelebirr} Birr*`, {
+    parse_mode: "Markdown"
+  });
 
-  if (data === "history_cancel") {
-    delete historySessions[chatId];
-    return bot.sendMessage(chatId, "❌ History lookup cancelled.");
-  }
+  // ✅ Send Excel
+  allData.push({});
+  allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
 
-  if (data.startsWith("history_confirm_yes_")) {
-    const timerId = data.split("history_confirm_yes_")[1];
-    delete historySessions[chatId];
+  const worksheet = XLSX.utils.json_to_sheet(allData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Combined History');
 
-    const paymentsSnap = await database.ref('Payments').once('value');
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+  const fileName = `combined_history_${Date.now()}.xlsx`;
+  const filePath = `/tmp/${fileName}`;
 
-    let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
-    const allData = [];
+  fs.writeFileSync(filePath, buffer);
 
-    if (paymentsSnap.exists()) {
-      paymentsSnap.forEach((snap) => {
-        const val = snap.val();
-        if (val.timeid === timerId) {
-          const amount = parseFloat(val.amountInBirr) || 0;
-          const method = val.paymentMethod?.toLowerCase() || '';
+  await bot.sendDocument(chatId, filePath, {}, {
+    filename: fileName,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
 
-          if (method.includes('cbe')) totalCBE += amount;
-          else if (method.includes('cash')) totalCash += amount;
-          else if (method.includes('telebirr')) totalTelebirr += amount;
-
-          allData.push({
-            Name: val.name || "N/A",
-            Room: val.selectedRoom || "N/A",
-            Amount: amount + ' Birr',
-            Timestamp: val.timestamp || "N/A",
-            salesname: val.salesname,
-            sex: val.sex,
-            days: val.days,
-            paymentMethod: val.paymentMethod,
-            phone: val.phone,
-          });
-        }
-      });
-    }
-
-    // ✅ Send summary
-    await bot.sendMessage(chatId, `📊 *Summary for Timer ID: ${timerId}*\n\n💵 Cash: *${totalCash} Birr*\n🏦 CBE: *${totalCBE} Birr*\n📱 Telebirr: *${totalTelebirr} Birr*`, {
-      parse_mode: "Markdown"
-    });
-
-    // ✅ Send Excel
-    allData.push({});
-    allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
-    allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
-    allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
-
-    const worksheet = XLSX.utils.json_to_sheet(allData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'History');
-
-    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
-    const fileName = `history_${timerId}_${new Date().toISOString().slice(0,10)}.xlsx`;
-    const filePath = `/tmp/${fileName}`;
-
-    fs.writeFileSync(filePath, buffer);
-
-    await bot.sendDocument(chatId, filePath, {}, {
-      filename: fileName,
-      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    fs.unlinkSync(filePath);
-  }
+  fs.unlinkSync(filePath);
 });
