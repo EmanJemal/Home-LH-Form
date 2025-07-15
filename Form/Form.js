@@ -4,7 +4,7 @@ import { auth, onAuthStateChanged } from '../Script/firebase.js';
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     // 🚨 Not authenticated, redirect to login page
-    window.location.href = '../log-in/loginpage.js';
+    window.location.href = '../log-in/loginpage.html';
   } else {
     console.log('✅ Authenticated as:', user.uid);
     // continue as normal...
