@@ -1,6 +1,7 @@
-// Import Firebase modules
+// firebase.js (using CDN imports)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
-import { getDatabase, ref, set, get, update, remove, onValue, child , push} from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js';
+import { getDatabase, ref, set, get, update, remove, onValue, child, push } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_RUop4ljHtYD-dpMDRBBTBuuUIKb5MH4",
@@ -12,9 +13,9 @@ const firebaseConfig = {
     measurementId: "G-N1FNRRNVDV"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
+const auth = getAuth(app);
 
-// Export the required Firebase modules
-export { getDatabase, database, ref, set, get, update, remove, onValue, child, push };
+// Export all needed things
+export { database, auth, ref, set, get, update, remove, onValue, child, push, signInWithEmailAndPassword, onAuthStateChanged, signOut };

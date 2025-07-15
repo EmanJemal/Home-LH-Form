@@ -9,6 +9,7 @@
     <script src=https://kit.fontawesome.com/4838fef60e.js crossorigin=anonymous></script></head>
     <link rel="stylesheet" href="../../General/general.css">
     <link rel="shortcut icon" href="../../Images/favicon-32x32.png" type=image/x-icon>
+    <script type="module" src="../../Script/firebase.js"></script>
 </head>
 <body>
     
@@ -17,297 +18,307 @@
         <h1 class="title">Home Land Hotel</h1>
     </div>
 
-
-    <div class="general">
-        <button id="submit-change">Submit The Change</button>
-    
-        <div class="types">
-
-            <div class="deluxe">
-                <h3>Deluxe</h3>
-                <input type="number" placeholder="Amount" class="deluxe-amount"><h3 class="birr"></h3>
-            </div>
-    
-            <div class="standard">
-                <h3>Standard</h3>
-                <input type="number" placeholder="Amount" class="standard-amount"><h3 class="birr"></h3>
-            </div>
-    
-            <div class="single">
-                <h3>Single</h3>
-                <input type="number" placeholder="Amount" class="single-amount"><h3 class="birr"></h3>
-            </div>
-
-            <div class="double">
-                <h3>Double</h3>
-                <input type="number" placeholder="Amount" class="double-amount"><h3 class="birr"></h3>
-            </div>
-
-
-        </div>
-    </div>
-    
-
-
-    <div class="rooms-set">
-        <button id="submit-change-rooms-detail">Submit The Change</button>
-
-        <div class="room-set">
-                <!-- Floor 1 -->
-            <div class="floor-1">
-                <h1>ፎቅ 1</h1>
-                <ul>
-                <li class="notbooked">
-                    <input type="radio" name="floor1-101" value="101">Room 101 
-                    <i class="fa-solid fa-arrow-right"></i>             
-                        
-                    <select name="room-type-101" class="room-type">
-                            <option value="Deluxe">Deluxe</option>
-                            <option value="Standard">Standard</option>
-                            <option value="Single">Single Room</option>
-                            <option value="Double">Double Room</option>
-                    </select> 
-                    
-                    <input type="text" placeholder="Enter the amount " class="room-one room">
-                </li>
-
-                <li class="notbooked"><input type="radio" name="floor1-102" value="102">Room 102 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-two room"></li>
-                    <li class="notbooked"><input type="radio" name="floor1-103" value="103">Room 103 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-three room"></li>
-                    <li class="notbooked"><input type="radio" name="floor1-104" value="104">Room 104 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-four room"></li>
-                    <li class="notbooked"><input type="radio" name="floor1-105" value="105">Room 105 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-five room"></li>
-                    <li class="notbooked"><input type="radio" name="floor1-106" value="106">Room 106 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-six room"></li>
-                    <li class="notbooked"><input type="radio" name="floor1-107" value="107">Room 107 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-seven room"></li>
-                    <li class="notbooked"><input type="radio" name="floor1-108" value="108">Room 108 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-eight room"></li>
-                    <li class="notbooked"><input type="radio" name="floor1-109" value="109">Room 109 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-nine room"></li>
-                </ul>
-            </div>
-
-            <!-- Floor 2 -->
-            <div class="floor-2">
-                <h1>ፎቅ 2</h1>
-                <ul>
-                    <li class="notbooked"><input type="radio" name="floor2-201" value="201">Room 201 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single</option>
-                <option value="Double">Double</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-ten room"></li>
-                    <li class="notbooked"><input type="radio" name="floor2-202" value="202">Room 202 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-eleven room"></li>
-                    <li class="notbooked"><input type="radio" name="floor2-203" value="203">Room 203 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-twelve room"></li>
-                    <li class="notbooked"><input type="radio" name="floor2-204" value="204">Room 204 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-thirteen room"></li>
-                    <li class="notbooked"><input type="radio" name="floor2-205" value="205">Room 205 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-fourteen room"></li>
-                    <li class="notbooked"><input type="radio" name="floor2-206" value="206">Room 206 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-fifteen room"></li>
-                    <li class="notbooked"><input type="radio" name="floor2-207" value="207">Room 207 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-sixteen room"></li>
-                    <li class="notbooked"><input type="radio" name="floor2-208" value="208">Room 208 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-seventeen room"></li>
-                    <li class="notbooked"><input type="radio" name="floor2-209" value="209">Room 209 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount " class="room-eighteen room"></li>
-                </ul>
-            </div>
-
-            <!-- Floor 3 -->
-            <div class="floor-3">
-                <h1>ፎቅ 3</h1>
-                <ul>
-                    <li class="notbooked"><input type="radio" name="floor3-301" value="301">Room 301 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor3-302" value="302">Room 302 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor3-303" value="303">Room 303 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor3-304" value="304">Room 304 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor3-305" value="305">Room 305 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor3-306" value="306">Room 306 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor3-307" value="307">Room 307 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor3-308" value="308">Room 308 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor3-309" value="309">Room 309 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                </ul>
-            </div>
-
-            <!-- Floor 4 -->
-            <div class="floor-4">
-                <h1>ፎቅ 4</h1>
-                <ul>
-                    <li class="notbooked"><input type="radio" name="floor4-401" value="401">Room 401 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor4-402" value="402">Room 402 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor4-403" value="403">Room 403 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor4-404" value="404">Room 404 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor4-405" value="405">Room 405 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor4-406" value="406">Room 406 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor4-407" value="407">Room 407 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor4-408" value="408">Room 408 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                    <li class="notbooked"><input type="radio" name="floor4-409" value="409">Room 409 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
-                <option value="Deluxe">Deluxe</option>
-                <option value="Standard">Standard</option>
-                <option value="Single">Single Room</option>
-                <option value="Double">Double Room</option>
-            </select> <input type="text" placeholder="Enter the amount" class="room"></li>
-                </ul>
-            </div>
-
-        </div>
+    <form id="admin-login-form">
+        <input type="email" id="email" placeholder="Admin Email" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <button type="submit">Login</button>
+      </form>
+    <div id="admin-panel" style="display:none;">
+        <h2>Welcome, Admin!</h2>
+        <!-- Your admin controls go here -->
+        <button id="logout-btn">Logout</button>
+      
+        <!-- Existing pricing and room controls can be inside here -->
+        <div class="general">
+            <button id="submit-change">Submit The Change</button>
         
-    </div>
+            <div class="types">
+    
+                <div class="deluxe">
+                    <h3>Deluxe</h3>
+                    <input type="number" placeholder="Amount" class="deluxe-amount"><h3 class="birr"></h3>
+                </div>
+        
+                <div class="standard">
+                    <h3>Standard</h3>
+                    <input type="number" placeholder="Amount" class="standard-amount"><h3 class="birr"></h3>
+                </div>
+        
+                <div class="single">
+                    <h3>Single</h3>
+                    <input type="number" placeholder="Amount" class="single-amount"><h3 class="birr"></h3>
+                </div>
+    
+                <div class="double">
+                    <h3>Double</h3>
+                    <input type="number" placeholder="Amount" class="double-amount"><h3 class="birr"></h3>
+                </div>
+    
+    
+            </div>
+        </div>
+      
+        <div class="rooms-set">
+            <button id="submit-change-rooms-detail">Submit The Change</button>
+    
+            <div class="room-set">
+                    <!-- Floor 1 -->
+                <div class="floor-1">
+                    <h1>ፎቅ 1</h1>
+                    <ul>
+                    <li class="notbooked">
+                        <input type="radio" name="floor1-101" value="101">Room 101 
+                        <i class="fa-solid fa-arrow-right"></i>             
+                            
+                        <select name="room-type-101" class="room-type">
+                                <option value="Deluxe">Deluxe</option>
+                                <option value="Standard">Standard</option>
+                                <option value="Single">Single Room</option>
+                                <option value="Double">Double Room</option>
+                        </select> 
+                        
+                        <input type="text" placeholder="Enter the amount " class="room-one room">
+                    </li>
+    
+                    <li class="notbooked"><input type="radio" name="floor1-102" value="102">Room 102 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-two room"></li>
+                        <li class="notbooked"><input type="radio" name="floor1-103" value="103">Room 103 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-three room"></li>
+                        <li class="notbooked"><input type="radio" name="floor1-104" value="104">Room 104 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-four room"></li>
+                        <li class="notbooked"><input type="radio" name="floor1-105" value="105">Room 105 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-five room"></li>
+                        <li class="notbooked"><input type="radio" name="floor1-106" value="106">Room 106 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-six room"></li>
+                        <li class="notbooked"><input type="radio" name="floor1-107" value="107">Room 107 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-seven room"></li>
+                        <li class="notbooked"><input type="radio" name="floor1-108" value="108">Room 108 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-eight room"></li>
+                        <li class="notbooked"><input type="radio" name="floor1-109" value="109">Room 109 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-nine room"></li>
+                    </ul>
+                </div>
+    
+                <!-- Floor 2 -->
+                <div class="floor-2">
+                    <h1>ፎቅ 2</h1>
+                    <ul>
+                        <li class="notbooked"><input type="radio" name="floor2-201" value="201">Room 201 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single</option>
+                    <option value="Double">Double</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-ten room"></li>
+                        <li class="notbooked"><input type="radio" name="floor2-202" value="202">Room 202 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-eleven room"></li>
+                        <li class="notbooked"><input type="radio" name="floor2-203" value="203">Room 203 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-twelve room"></li>
+                        <li class="notbooked"><input type="radio" name="floor2-204" value="204">Room 204 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-thirteen room"></li>
+                        <li class="notbooked"><input type="radio" name="floor2-205" value="205">Room 205 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-fourteen room"></li>
+                        <li class="notbooked"><input type="radio" name="floor2-206" value="206">Room 206 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-fifteen room"></li>
+                        <li class="notbooked"><input type="radio" name="floor2-207" value="207">Room 207 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-sixteen room"></li>
+                        <li class="notbooked"><input type="radio" name="floor2-208" value="208">Room 208 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-seventeen room"></li>
+                        <li class="notbooked"><input type="radio" name="floor2-209" value="209">Room 209 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount " class="room-eighteen room"></li>
+                    </ul>
+                </div>
+    
+                <!-- Floor 3 -->
+                <div class="floor-3">
+                    <h1>ፎቅ 3</h1>
+                    <ul>
+                        <li class="notbooked"><input type="radio" name="floor3-301" value="301">Room 301 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor3-302" value="302">Room 302 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor3-303" value="303">Room 303 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor3-304" value="304">Room 304 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor3-305" value="305">Room 305 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor3-306" value="306">Room 306 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor3-307" value="307">Room 307 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor3-308" value="308">Room 308 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor3-309" value="309">Room 309 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                    </ul>
+                </div>
+    
+                <!-- Floor 4 -->
+                <div class="floor-4">
+                    <h1>ፎቅ 4</h1>
+                    <ul>
+                        <li class="notbooked"><input type="radio" name="floor4-401" value="401">Room 401 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor4-402" value="402">Room 402 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor4-403" value="403">Room 403 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor4-404" value="404">Room 404 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor4-405" value="405">Room 405 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor4-406" value="406">Room 406 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor4-407" value="407">Room 407 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor4-408" value="408">Room 408 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                        <li class="notbooked"><input type="radio" name="floor4-409" value="409">Room 409 <i class="fa-solid fa-arrow-right"></i>             <select name="room-type-101" class="room-type">
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Single">Single Room</option>
+                    <option value="Double">Double Room</option>
+                </select> <input type="text" placeholder="Enter the amount" class="room"></li>
+                    </ul>
+                </div>
+    
+            </div>
+            
+        </div>
+      </div>
+      
 
 
     <script src="rooms-amt.js" type="module"></script>

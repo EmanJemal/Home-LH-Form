@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Land Hotel</title>
+    <link rel="stylesheet" href="rooms-amt.css">
+    <link rel=stylesheet id=google-fonts-1-css href="https://fonts.googleapis.com/css?family=Poppins%3A100%2C100italic%2C200%2C200italic%2C300%2C300italic%2C400%2C400italic%2C500%2C500italic%2C600%2C600italic%2C700%2C700italic%2C800%2C800italic%2C900%2C900italic&amp;display=swap&amp;ver=6.6" media=all>
+    <script src=https://kit.fontawesome.com/4838fef60e.js crossorigin=anonymous></script></head>
+    <link rel="stylesheet" href="../../General/general.css">
+    <link rel="shortcut icon" href="../../Images/favicon-32x32.png" type=image/x-icon>
+    <script type="module" src="../../Script/firebase.js"></script>
+    <script type="module" src="loginpage.js"></script>
+  <style>
+    body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+}
+.login-container {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px #aaa;
+  width: 300px;
+}
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+}
+button {
+  width: 100%;
+  padding: 10px;
+  background: #004aad;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.error {
+  color: red;
+  margin-top: 10px;
+  font-size: 0.9em;
+}
+
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="/Images/Home Land Hotel Logo.png" alt="home-land-hotel-logo" class="logo">
+    <h1 class="title">Home Land Hotel</h1>
+</div>
+
+<form id="admin-login-form">
+    <input type="email" id="email" placeholder="Admin Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button type="submit">Login</button>
+  </form>
+
+
+
+  <script type="module" src="admin-login.js"></script>
+</body>
+</html>

@@ -1,5 +1,67 @@
-import { getDatabase, database, ref, set, get, update, remove, onValue, child , push} from '../../Script/firebase.js';
+import { 
+    auth, database, ref, set, get, update, remove, onValue, child, push, 
+    signInWithEmailAndPassword, onAuthStateChanged, signOut 
+  } from '../../Script/firebase.js';
+  
+// Now `auth` is defined and ready to use
 
+const loginForm = document.getElementById('admin-login-form');
+const adminPanel = document.getElementById('admin-panel');  // You don't have this div in your HTML yet, create it or adjust accordingly
+const logoutBtn = document.getElementById('logout-btn');    // Same here — make sure logout button exists
+
+// Login handler
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const email = loginForm.email.value;
+  const password = loginForm.password.value;
+
+  signInWithEmailAndPassword(auth, email, password)
+    .then(({ user }) => {
+      console.log('Logged in:', user.uid);
+      checkAdmin(user.uid);
+    })
+    .catch(error => {
+      alert('Login failed: ' + error.message);
+    });
+});
+
+// Logout handler
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () => {
+    signOut(auth).then(() => {
+      adminPanel.style.display = 'none';
+      loginForm.style.display = 'block';
+    });
+  });
+}
+
+function checkAdmin(uid) {
+  get(child(ref(database), `admins/${uid}`))
+    .then(snapshot => {
+      if (snapshot.exists()) {
+        adminPanel.style.display = 'block';
+        loginForm.style.display = 'none';
+      } else {
+        alert('Access denied: You are not an admin.');
+        signOut(auth);
+      }
+    })
+    .catch(err => {
+      console.error('Error checking admin status:', err);
+      alert('Error checking admin status');
+    });
+}
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    checkAdmin(user.uid);
+  } else {
+    if (adminPanel) adminPanel.style.display = 'none';
+    if (loginForm) loginForm.style.display = 'block';
+  }
+});
+
+  
 // Reference to the database
 const dbRef = ref(database);
 

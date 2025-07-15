@@ -1,4 +1,15 @@
 import { database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
+import { auth, onAuthStateChanged } from '../Script/firebase.js';
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    // 🚨 Not authenticated, redirect to login page
+    window.location.href = '../log-in/loginpage.js';
+  } else {
+    console.log('✅ Authenticated as:', user.uid);
+    // continue as normal...
+  }
+});
 
  //localStorage.setItem('Entering Pin', 45284270810258310208532513043010152410200935993930) 
 
