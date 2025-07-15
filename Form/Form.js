@@ -173,7 +173,7 @@ submitButton.addEventListener('click', async() => {
     const paymentData = {
         name: name,
         salesname: salesname,
-        timeid: timerId,
+        timeid: String(timerId),
         age: age,
         nationality: nationality,
         customerId: customerId,
