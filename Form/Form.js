@@ -94,7 +94,9 @@ submitButton.addEventListener('click', async() => {
     const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value;
     const amountInBirr = document.querySelector('.calculation .answer').innerHTML;
     const nameOfRec = document.getElementById('passwordInput').innerHTML;
-    // ✅ This is the true customer ID
+    const screneenshot = document.querySelector('.screneenshot-lable input').value;
+
+    // ✅ This is the true customer ID 
     
     // Identify selected room
     let selectedRoom = null;
@@ -165,6 +167,7 @@ submitButton.addEventListener('click', async() => {
         customerId: customerId,
         nameOfRec: nameOfRec,
         phone: phone,
+        screenshot_id: screneenshot,
     }
 
     const paymentData = {
@@ -182,6 +185,7 @@ submitButton.addEventListener('click', async() => {
         amountInBirr: amountInBirr,
         nameOfRec: nameOfRec,
         phone: phone,
+        screenshot_id: screneenshot,
     }
 
     showRemovePopup(userData);

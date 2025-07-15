@@ -345,3 +345,226 @@ bot.on('callback_query', async (query) => {
 
   await bot.answerCallbackQuery(query.id);
 });
+
+
+bot.onText(/\/active/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  // Allow only main admin
+  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
+  }
+
+  const timerSnapshot = await database.ref('timer').once('value');
+  if (!timerSnapshot.exists()) {
+    return bot.sendMessage(chatId, "✅ No active timer sessions.");
+  }
+
+  const data = timerSnapshot.val();
+  const activeTimers = Object.entries(data);
+
+  for (const [salesName, details] of activeTimers) {
+    const { timer_id, time } = details;
+
+    const startTime = new Date(time).toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' });
+    const text = `🟢 *Active Timer Info:*\n\n👤 Salesperson: *${salesName}*\n🆔 Timer ID: *${timer_id}*\n⏰ Started: *${startTime}*`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: `📤 Get Excel for ${salesName}`, callback_data: `get_excel_${salesName}_${timer_id}` },
+          { text: `👋 Force Leave`, callback_data: `force_leave_${salesName}_${timer_id}` }
+        ]
+      ]
+    };
+
+    await bot.sendMessage(chatId, text, {
+      parse_mode: "Markdown",
+      reply_markup: keyboard
+    });
+  }
+});
+
+
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.data;
+  await bot.answerCallbackQuery(query.id); // Always clear "loading"
+
+  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to perform this action.");
+  }
+
+  // Handle Excel generation
+  if (data.startsWith("get_excel_")) {
+    const [, salesName, timerId] = data.split("_");
+    const paymentsSnap = await database.ref('Payments').once('value');
+    const allData = [];
+    let totalCBE = 0;
+
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach((snap) => {
+        const val = snap.val();
+        if (val.timeid === timerId) {
+          const amount = parseFloat(val.amountInBirr) || 0;
+          allData.push({
+            Name: val.name || "N/A",
+            Room: val.selectedRoom || "N/A",
+            Amount: amount + ' Birr',
+            Timestamp: val.timestamp || "N/A",
+            salesname: val.salesname,
+            sex: val.sex,
+            days: val.days,
+            paymentMethod: val.paymentMethod,
+            phone: val.phone,
+          });
+          if (val.paymentMethod?.toLowerCase().includes('cbe')) {
+            totalCBE += amount;
+          }
+        }
+      });
+    }
+
+    allData.push({});
+    allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+
+    const worksheet = XLSX.utils.json_to_sheet(allData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    const fileName = `timer_${timerId}_report_${new Date().toISOString().slice(0,10)}.xlsx`;
+    const filePath = `/tmp/${fileName}`;
+
+    fs.writeFileSync(filePath, buffer);
+
+    await bot.sendDocument(chatId, filePath, {}, {
+      filename: fileName,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    fs.unlinkSync(filePath);
+  }
+
+  // Handle force leave
+  if (data.startsWith("force_leave_")) {
+    const [, salesName, timerId] = data.split("_");
+
+    // Remove active timer
+    await database.ref(`timer/${salesName}`).remove();
+    await database.ref(`timer_id_ver/${timerId}`).update({ Used: false, endTime: Date.now() });
+
+    await bot.sendMessage(chatId, `🛑 Forced end for ${salesName}'s session (ID: ${timerId})`);
+  }
+});
+const historySessions = {}; // chatId -> state
+bot.onText(/\/history/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
+  }
+
+  historySessions[chatId] = { step: 'awaiting_timer_id' };
+  bot.sendMessage(chatId, "🔎 Please enter the *Timer ID* you want to check history for:", { parse_mode: "Markdown" });
+});
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (msg.text.startsWith('/') || chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) return;
+
+  const session = historySessions[chatId];
+  if (!session) return;
+
+  if (session.step === 'awaiting_timer_id') {
+    const timerId = msg.text.trim();
+    session.timerId = timerId;
+    session.step = 'confirm_single_id';
+
+    return bot.sendMessage(chatId, `🆔 You entered Timer ID: *${timerId}*\n\nIs this the only ID to check?`, {
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "✅ Yes", callback_data: `history_confirm_yes_${timerId}` }],
+          [{ text: "❌ Cancel", callback_data: `history_cancel` }]
+        ]
+      }
+    });
+  }
+});
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.data;
+  await bot.answerCallbackQuery(query.id); // clear button loading
+
+  if (!data.startsWith("history_")) return;
+
+  if (data === "history_cancel") {
+    delete historySessions[chatId];
+    return bot.sendMessage(chatId, "❌ History lookup cancelled.");
+  }
+
+  if (data.startsWith("history_confirm_yes_")) {
+    const timerId = data.split("history_confirm_yes_")[1];
+    delete historySessions[chatId];
+
+    const paymentsSnap = await database.ref('Payments').once('value');
+
+    let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+    const allData = [];
+
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach((snap) => {
+        const val = snap.val();
+        if (val.timeid === timerId) {
+          const amount = parseFloat(val.amountInBirr) || 0;
+          const method = val.paymentMethod?.toLowerCase() || '';
+
+          if (method.includes('cbe')) totalCBE += amount;
+          else if (method.includes('cash')) totalCash += amount;
+          else if (method.includes('telebirr')) totalTelebirr += amount;
+
+          allData.push({
+            Name: val.name || "N/A",
+            Room: val.selectedRoom || "N/A",
+            Amount: amount + ' Birr',
+            Timestamp: val.timestamp || "N/A",
+            salesname: val.salesname,
+            sex: val.sex,
+            days: val.days,
+            paymentMethod: val.paymentMethod,
+            phone: val.phone,
+          });
+        }
+      });
+    }
+
+    // ✅ Send summary
+    await bot.sendMessage(chatId, `📊 *Summary for Timer ID: ${timerId}*\n\n💵 Cash: *${totalCash} Birr*\n🏦 CBE: *${totalCBE} Birr*\n📱 Telebirr: *${totalTelebirr} Birr*`, {
+      parse_mode: "Markdown"
+    });
+
+    // ✅ Send Excel
+    allData.push({});
+    allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+    allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+    allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
+
+    const worksheet = XLSX.utils.json_to_sheet(allData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'History');
+
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    const fileName = `history_${timerId}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    const filePath = `/tmp/${fileName}`;
+
+    fs.writeFileSync(filePath, buffer);
+
+    await bot.sendDocument(chatId, filePath, {}, {
+      filename: fileName,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    fs.unlinkSync(filePath);
+  }
+});
