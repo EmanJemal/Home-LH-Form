@@ -186,6 +186,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running at home-lh-form-production.up.railway.app:${PORT}`);
 });
 
+const forceLeaveSessions = {}; // { [chatId]: { expectedTimerId, salesName } }
 
 
 async function handleStartMyTime(chatId) {
@@ -250,7 +251,7 @@ bot.onText(/\/start-my-time/, async (msg) => {
 
 
 async function handleLeave(chatId) {
-  const salesName = chatId == process.env.SALES_1_CHAT_ID ? "arafat" :
+  const salesName = chatId == process.env.SALES_1_CHAT_ID ? "Mahlete" :
                     chatId == process.env.SALES_2_CHAT_ID ? "amana" :
                     chatId == process.env.SALES_3_CHAT_ID ? "sifan" : "unknown";
 
@@ -324,33 +325,79 @@ async function handleLeave(chatId) {
     parse_mode: "Markdown"
   });
 }
+async function handleForcedLeave(salesName, timerId, adminChatId) {
+  const db = getDatabase();
+  const timerRef = db.ref(`timer/${salesName}`);
+  const snapshot = await timerRef.once('value');
+
+  if (!snapshot.exists()) {
+    return bot.sendMessage(adminChatId, `❌ No active timer found for ${salesName}.`);
+  }
+
+  await timerRef.remove();
+  await db.ref(`timer_id_ver/${timerId}`).update({ Used: false, endTime: Date.now() });
+
+  const paymentsSnap = await db.ref('Payments').once('value');
+  const allData = [];
+  let totalCBE = 0;
+
+  if (paymentsSnap.exists()) {
+    paymentsSnap.forEach((snap) => {
+      const val = snap.val();
+      if (val.timeid === timerId) {
+        const amount = parseFloat(val.amountInBirr) || 0;
+        allData.push({
+          Name: val.name || "N/A",
+          Room: val.selectedRoom || "N/A",
+          Amount: amount + ' Birr',
+          Timestamp: val.timestamp || "N/A",
+          salesname: val.salesname,
+          sex: val.sex,
+          days: val.days,
+          paymentMethod: val.paymentMethod,
+          phone: val.phone,
+        });
+        if (val.paymentMethod?.toLowerCase().includes('cbe')) {
+          totalCBE += amount;
+        }
+      }
+    });
+  }
+
+  allData.push({});
+  allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+
+  const worksheet = XLSX.utils.json_to_sheet(allData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+  const fileName = `forced_leave_${salesName}_${timerId}.xlsx`;
+  const filePath = `/tmp/${fileName}`;
+
+  fs.writeFileSync(filePath, buffer);
+
+  await bot.sendDocument(adminChatId, filePath, {}, {
+    filename: fileName,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  fs.unlinkSync(filePath);
+
+  await bot.sendMessage(adminChatId, `✅ Force leave completed for *${salesName}* with Timer ID *${timerId}*.\nExcel report has been sent.`, {
+    parse_mode: "Markdown"
+  });
+}
+
 
 bot.onText(/\/leave/, async (msg) => {
   await handleLeave(msg.chat.id);
 });
 
 
-
-bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const data = query.data;
-
-  if (data === "/start-my-time") {
-    await handleStartMyTime(chatId);
-  }
-
-  if (data === "/leave") {
-    await handleLeave(chatId);
-  }
-
-  await bot.answerCallbackQuery(query.id);
-});
-
-
 bot.onText(/\/active/, async (msg) => {
   const chatId = msg.chat.id;
 
-  // Allow only main admin
   if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
     return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
   }
@@ -365,9 +412,26 @@ bot.onText(/\/active/, async (msg) => {
 
   for (const [salesName, details] of activeTimers) {
     const { timer_id, time } = details;
-
     const startTime = new Date(time).toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' });
-    const text = `🟢 *Active Timer Info:*\n\n👤 Salesperson: *${salesName}*\n🆔 Timer ID: *${timer_id}*\n⏰ Started: *${startTime}*`;
+
+    // 🧮 Calculate totals
+    const paymentsSnap = await database.ref('Payments').once('value');
+    let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach(snap => {
+        const val = snap.val();
+        if (val.timeid === String(timer_id)) {
+          const amt = parseFloat(val.amountInBirr) || 0;
+          const method = val.paymentMethod?.toLowerCase() || '';
+          if (method.includes('cbe')) totalCBE += amt;
+          else if (method.includes('cash')) totalCash += amt;
+          else if (method.includes('telebirr')) totalTelebirr += amt;
+        }
+      });
+    }
+
+    const text = `🟢 *Active Timer Info:*\n\n👤 Salesperson: *${salesName}*\n🆔 Timer ID: *${timer_id}*\n⏰ Started: *${startTime}*\n\n💵 Cash: *${totalCash} Birr*\n🏦 CBE: *${totalCBE} Birr*\n📱 Telebirr: *${totalTelebirr} Birr*`;
 
     const keyboard = {
       inline_keyboard: [
@@ -384,6 +448,7 @@ bot.onText(/\/active/, async (msg) => {
     });
   }
 });
+
 
 
 bot.on('callback_query', async (query) => {
@@ -457,7 +522,9 @@ bot.on('callback_query', async (query) => {
     await bot.sendMessage(chatId, `🛑 Forced end for ${salesName}'s session (ID: ${timerId})`);
   }
 });
+
 const historySessions = {}; // For session state per chat
+
 bot.onText(/\/history/, async (msg) => {
   const chatId = msg.chat.id;
 
@@ -470,80 +537,95 @@ bot.onText(/\/history/, async (msg) => {
     parse_mode: "Markdown"
   });
 });
+
+
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
 
-  if (msg.text.startsWith('/') || chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) return;
+  // Block commands or ignore if not main admin
+  if (!text || text.startsWith('/') || chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) return;
 
+  // 🔁 Handle history session
   const session = historySessions[chatId];
-  if (!session || session.step !== 'awaiting_timer_ids') return;
+  if (session?.step === 'awaiting_timer_ids') {
+    const timerIds = text.split(',').map(id => id.trim()).filter(Boolean);
+    if (timerIds.length === 0) {
+      return bot.sendMessage(chatId, "❌ Invalid input. Please enter at least one valid Timer ID.");
+    }
 
-  // ✅ Parse multiple timer IDs
-  const timerIds = text.split(',').map(id => id.trim()).filter(Boolean);
-  if (timerIds.length === 0) {
-    return bot.sendMessage(chatId, "❌ Invalid input. Please enter at least one valid Timer ID.");
-  }
+    delete historySessions[chatId];
 
-  delete historySessions[chatId]; // Clear session
+    const paymentsSnap = await database.ref('Payments').once('value');
+    let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+    const allData = [];
 
-  const paymentsSnap = await database.ref('Payments').once('value');
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach((snap) => {
+        const val = snap.val();
+        if (val.timeid && timerIds.includes(val.timeid)) {
+          const amount = parseFloat(val.amountInBirr) || 0;
+          const method = val.paymentMethod?.toLowerCase() || '';
 
-  let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
-  const allData = [];
+          if (method.includes('cbe')) totalCBE += amount;
+          else if (method.includes('cash')) totalCash += amount;
+          else if (method.includes('telebirr')) totalTelebirr += amount;
 
-  if (paymentsSnap.exists()) {
-    paymentsSnap.forEach((snap) => {
-      const val = snap.val();
-      if (val.timeid && timerIds.includes(val.timeid)) {
-        const amount = parseFloat(val.amountInBirr) || 0;
-        const method = val.paymentMethod?.toLowerCase() || '';
+          allData.push({
+            Name: val.name || "N/A",
+            Room: val.selectedRoom || "N/A",
+            Amount: amount + ' Birr',
+            Timestamp: val.timestamp || "N/A",
+            salesname: val.salesname,
+            sex: val.sex,
+            days: val.days,
+            paymentMethod: val.paymentMethod,
+            phone: val.phone,
+            TimerID: val.timeid,
+          });
+        }
+      });
+    }
 
-        if (method.includes('cbe')) totalCBE += amount;
-        else if (method.includes('cash')) totalCash += amount;
-        else if (method.includes('telebirr')) totalTelebirr += amount;
-
-        allData.push({
-          Name: val.name || "N/A",
-          Room: val.selectedRoom || "N/A",
-          Amount: amount + ' Birr',
-          Timestamp: val.timestamp || "N/A",
-          salesname: val.salesname,
-          sex: val.sex,
-          days: val.days,
-          paymentMethod: val.paymentMethod,
-          phone: val.phone,
-          TimerID: val.timeid,
-        });
-      }
+    // ✅ Summary
+    await bot.sendMessage(chatId, `📊 *Combined Summary for Timer IDs: ${timerIds.join(', ')}*\n\n💵 Cash: *${totalCash} Birr*\n🏦 CBE: *${totalCBE} Birr*\n📱 Telebirr: *${totalTelebirr} Birr*`, {
+      parse_mode: "Markdown"
     });
+
+    allData.push({});
+    allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+    allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+    allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
+
+    const worksheet = XLSX.utils.json_to_sheet(allData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Combined History');
+
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+    const fileName = `combined_history_${Date.now()}.xlsx`;
+    const filePath = `/tmp/${fileName}`;
+
+    fs.writeFileSync(filePath, buffer);
+
+    await bot.sendDocument(chatId, filePath, {}, {
+      filename: fileName,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    fs.unlinkSync(filePath);
+    return;
   }
 
-  // ✅ Send summary
-  await bot.sendMessage(chatId, `📊 *Combined Summary for Timer IDs: ${timerIds.join(', ')}*\n\n💵 Cash: *${totalCash} Birr*\n🏦 CBE: *${totalCBE} Birr*\n📱 Telebirr: *${totalTelebirr} Birr*`, {
-    parse_mode: "Markdown"
-  });
-
-  // ✅ Send Excel
-  allData.push({});
-  allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
-  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
-  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
-
-  const worksheet = XLSX.utils.json_to_sheet(allData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Combined History');
-
-  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
-  const fileName = `combined_history_${Date.now()}.xlsx`;
-  const filePath = `/tmp/${fileName}`;
-
-  fs.writeFileSync(filePath, buffer);
-
-  await bot.sendDocument(chatId, filePath, {}, {
-    filename: fileName,
-    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  });
-
-  fs.unlinkSync(filePath);
+  // 🔁 Handle force leave confirmation
+  const forceSession = forceLeaveSessions[chatId];
+  if (forceSession) {
+    const { expectedTimerId, salesName } = forceSession;
+    if (text === expectedTimerId) {
+      delete forceLeaveSessions[chatId];
+      await handleForcedLeave(salesName, expectedTimerId, chatId);
+    } else {
+      delete forceLeaveSessions[chatId];
+      await bot.sendMessage(chatId, "❌ Incorrect Timer ID. Force leave cancelled.");
+    }
+  }
 });
