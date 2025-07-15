@@ -13,6 +13,10 @@ const PORT = process.env.PORT || 5501;
 dotenv.config();
 
 const serviceAccountBase64 = process.env.FIREBASE_CONFIG_BASE64;
+if (!serviceAccountBase64) {
+  throw new Error("FIREBASE_CONFIG_BASE64 is not defined in .env");
+}
+
 const decodedServiceAccount = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf8'));
 
 initializeApp({
