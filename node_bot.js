@@ -462,7 +462,7 @@ bot.on('callback_query', async (query) => {
 
   // Handle Excel generation
   if (data.startsWith("get_excel_")) {
-    const [, salesName, timerId] = data.split("_");
+    const [, , salesName, timerId] = data.split("_");
     const paymentsSnap = await database.ref('Payments').once('value');
     const allData = [];
     let totalCBE = 0;
