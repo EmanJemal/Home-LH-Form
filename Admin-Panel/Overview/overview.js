@@ -3,7 +3,7 @@ import { database, ref, set, get, update, remove, onValue, child, push } from '.
 
 // References to DOM Elements
 const roomsReservedElement = document.querySelector('.total-rooms-reserved h1');
-const dailyRevenueElement = document.querySelector('.total-money-made-day h1');
+const dailyRevenueElement = document.querySelector('.total-money-made-day h2');
 
 // Reference to the rooms and customers nodes in the database
 const roomsRef = ref(database, 'rooms');
@@ -41,22 +41,20 @@ onValue(roomsRef, (snapshot) => {
 onValue(paymentsRef, (snapshot) => {
     if (!snapshot.exists()) {
         console.log("❌ No payment data");
-        dailyRevenueElement.textContent = '0 Birr';
+        dailyRevenueElement.innerHTML = '0 Birr';
         return;
     }
 
     const data = snapshot.val();
-    let total = 0;
 
-    // Ethiopia time now
+    // 🕒 Current time in Ethiopia
     const now = new Date();
-    const ethioNow = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Addis_Ababa" }));
+    const addisNow = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Addis_Ababa" }));
 
-    // Set Ethiopian day window: 3:00 AM to next day 2:59 AM
-    const ethioStart = new Date(ethioNow);
+    const ethioStart = new Date(addisNow);
     ethioStart.setHours(3, 0, 0, 0);
 
-    if (ethioNow < ethioStart) {
+    if (addisNow < ethioStart) {
         ethioStart.setDate(ethioStart.getDate() - 1);
     }
 
@@ -67,34 +65,48 @@ onValue(paymentsRef, (snapshot) => {
     console.log("Start:", ethioStart.toString());
     console.log("End:", ethioEnd.toString());
 
+    // 👛 Initialize totals
+    let total = 0;
+    let byMethod = {
+        Cash: 0,
+        Telebirr: 0,
+        CBE: 0,
+        Dube: 0
+    };
+
     for (const id in data) {
         const val = data[id];
         const tsString = val.timestamp;
 
         if (tsString && typeof tsString === 'string') {
-            const parsedEthiopia = parseCustomTimestamp(tsString); // ✅ Use your custom parser
+            const parsed = parseCustomTimestamp(tsString);
 
-            if (!parsedEthiopia) continue;
-
-            console.log(`🧾 ID: ${id}`);
-            console.log(`↳ Timestamp: ${tsString}`);
-            console.log(`↳ Parsed Ethiopia Time: ${parsedEthiopia}`);
-
-            if (parsedEthiopia >= ethioStart && parsedEthiopia < ethioEnd) {
+            if (parsed >= ethioStart && parsed < ethioEnd) {
                 const amt = parseFloat(val.amountInBirr);
                 if (!isNaN(amt)) {
-                    console.log(`✅ Included: ${amt}`);
                     total += amt;
+
+                    const method = (val.paymentMethod || '').toLowerCase();
+                    if (method.includes("cash")) byMethod.Cash += amt;
+                    else if (method.includes("telebirr")) byMethod.Telebirr += amt;
+                    else if (method.includes("cbe")) byMethod.CBE += amt;
+                    else if (method.includes("dube") || method.includes("debtors")) byMethod.Dube += amt;
                 }
-            } else {
-                console.log("⛔ Skipped (outside Ethiopian today range)");
             }
         }
     }
 
     console.log("💰 Final Total:", total);
-    dailyRevenueElement.textContent = `${total.toLocaleString()} Birr`;
+
+    dailyRevenueElement.innerHTML = `
+        <div><strong>Total:</strong> ${total.toLocaleString()} Birr</div>
+        <div><strong>Cash:</strong> ${byMethod.Cash.toLocaleString()} Birr</div>
+        <div><strong>Telebirr:</strong> ${byMethod.Telebirr.toLocaleString()} Birr</div>
+        <div><strong>CBE:</strong> ${byMethod.CBE.toLocaleString()} Birr</div>
+        <div><strong>Dube:</strong> ${byMethod.Dube.toLocaleString()} Birr</div>
+    `;
 });
+
 
 
 
