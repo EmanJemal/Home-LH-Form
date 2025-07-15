@@ -38,26 +38,66 @@ onValue(roomsRef, (snapshot) => {
 });
 
 /* Calculate Total Money Made Today */
-onValue(customersRef, (snapshot) => {
-    if (snapshot.exists()) {
-        const customersData = snapshot.val();
-        let totalRevenue = 0;
+onValue(paymentsRef, (snapshot) => {
+    if (!snapshot.exists()) {
+        console.log("❌ No payment data");
+        dailyRevenueElement.textContent = '0 Birr';
+        return;
+    }
 
-        for (const customer in customersData) {
-            const amount = customersData[customer].amountInBirr;
-            if (amount) {
-                totalRevenue += Number(amount); // Ensure it's added as a number
+    const data = snapshot.val();
+    let total = 0;
+
+    // Ethiopia time now
+    const now = new Date();
+    const ethioNow = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Addis_Ababa" }));
+
+    // Set Ethiopian day window: 3:00 AM to next day 2:59 AM
+    const ethioStart = new Date(ethioNow);
+    ethioStart.setHours(3, 0, 0, 0);
+
+    if (ethioNow < ethioStart) {
+        ethioStart.setDate(ethioStart.getDate() - 1);
+    }
+
+    const ethioEnd = new Date(ethioStart);
+    ethioEnd.setDate(ethioEnd.getDate() + 1);
+
+    console.log("🔁 Ethiopian Day Range:");
+    console.log("Start:", ethioStart.toString());
+    console.log("End:", ethioEnd.toString());
+
+    for (const id in data) {
+        const val = data[id];
+        const tsString = val.timestamp;
+
+        if (tsString && typeof tsString === 'string') {
+            const parsedEthiopia = parseCustomTimestamp(tsString); // ✅ Use your custom parser
+
+            if (!parsedEthiopia) continue;
+
+            console.log(`🧾 ID: ${id}`);
+            console.log(`↳ Timestamp: ${tsString}`);
+            console.log(`↳ Parsed Ethiopia Time: ${parsedEthiopia}`);
+
+            if (parsedEthiopia >= ethioStart && parsedEthiopia < ethioEnd) {
+                const amt = parseFloat(val.amountInBirr);
+                if (!isNaN(amt)) {
+                    console.log(`✅ Included: ${amt}`);
+                    total += amt;
+                }
+            } else {
+                console.log("⛔ Skipped (outside Ethiopian today range)");
             }
         }
-
-        dailyRevenueElement.textContent = `${totalRevenue.toLocaleString()} Birr`;
-    } else {
-        console.log("No customer data available");
-        dailyRevenueElement.textContent = '0 Birr';
     }
-}, (error) => {
-    console.error("Error fetching customer data:", error);
+
+    console.log("💰 Final Total:", total);
+    dailyRevenueElement.textContent = `${total.toLocaleString()} Birr`;
 });
+
+
+
 
 
 

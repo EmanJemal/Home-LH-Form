@@ -302,7 +302,8 @@ async function handleLeave(chatId) {
 
   allData.push({});
   allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
-
+  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
   const worksheet = XLSX.utils.json_to_sheet(allData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
@@ -366,7 +367,8 @@ async function handleForcedLeave(salesName, timerId, adminChatId) {
 
   allData.push({});
   allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
-
+  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
   const worksheet = XLSX.utils.json_to_sheet(allData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
@@ -492,6 +494,8 @@ bot.on('callback_query', async (query) => {
 
     allData.push({});
     allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+    allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+    allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
 
     const worksheet = XLSX.utils.json_to_sheet(allData);
     const workbook = XLSX.utils.book_new();
