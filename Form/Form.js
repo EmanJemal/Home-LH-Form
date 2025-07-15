@@ -7,7 +7,7 @@ if(data != 45284270810258310208532513043010152410200935993930){
  document.body.innerHTML = '<h1>You are not allowed</h1>'
 }
 
-
+  
 
 
 // Fetch the room types from Firebase and update the webpage
@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", function () {
 const submitButton = document.querySelector('#submit-btn');
 document.querySelector('.days-lable').value = 1;
 
-submitButton.addEventListener('click', () => {
+submitButton.addEventListener('click', async() => {
     // Fetch form values
     const customerRef = ref(database, 'customers');
     const newCustomerRef = push(customerRef); // push generates unique key
@@ -109,8 +109,29 @@ submitButton.addEventListener('click', () => {
     }
 
     const timestamp = Date.now();
-    // Create a Date object
-        const date = new Date(timestamp);
+
+
+    async function getTimerId() {
+        const timerRef = ref(database, 'timer');
+        const snapshot = await get(timerRef);
+      
+        if (!snapshot.exists()) return null;
+      
+        const timerData = snapshot.val();
+        const salesNames = Object.keys(timerData);
+        if (salesNames.length === 0) return null;
+      
+        const firstSalesData = timerData[salesNames[0]];
+        return firstSalesData?.timer_id || null;
+      }
+      const timerId = await getTimerId();
+      if (!timerId) {
+        alert("⛔ No active timer found. Start your timer from the bot first.");
+      }
+      console.log("✅ Timer ID:", timerId);
+
+
+    const date = new Date(timestamp);
 
         // Convert to Ethiopian time (UTC+3)
         const options = {
@@ -149,6 +170,7 @@ submitButton.addEventListener('click', () => {
     const paymentData = {
         name: name,
         salesname: salesname,
+        timeid: timerId,
         age: age,
         nationality: nationality,
         customerId: customerId,
