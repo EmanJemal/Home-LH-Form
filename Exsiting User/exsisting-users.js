@@ -464,84 +464,151 @@ showBTN.addEventListener('click', () => {
            };
 });
 
+
 const showBTNTimer = document.querySelector(".showBTNTimer");
 
 showBTNTimer.addEventListener('click', () => {
-    const modal = document.getElementById('removeCustomerModal');
-    modal.style.display = 'block';
-  
-    document.getElementById('confirmRemoveBtn').onclick = async () => {
-      const password = document.getElementById('passwordInput').value;
-      const timerId = prompt("Enter the 5-digit Timer ID:");
-  
-      if (!timerId) return alert("Timer ID is required.");
-  
-      if (password !== '151584') {
-        alert('Incorrect password.');
-        return;
-      }
-  
-      modal.style.display = 'none';
-      const paymentsSnap = await get(child(ref(database), 'Payments'));
-  
-      let total = { Cash: 0, Telebirr: 0, CBE: 0, Dube: 0 };
-      const allData = [];
-  
-      if (paymentsSnap.exists()) {
-        paymentsSnap.forEach((snap) => {
-          const val = snap.val();
-          const amount = parseFloat(val.amountInBirr);
-          const paymentMethod = val.paymentMethod?.toLowerCase();
-  
-          if (val.timeid === timerId && !isNaN(amount)) {
-            if (paymentMethod.includes("cash")) total.Cash += amount;
-            else if (paymentMethod.includes("telebirr")) total.Telebirr += amount;
-            else if (paymentMethod.includes("cbe")) total.CBE += amount;
-            else if (paymentMethod.includes("debtors")) total.Dube += amount;
-  
-            allData.push({
-              Name: val.name || "N/A",
-              Room: val.selectedRoom || "N/A",
-              Amount: amount + ' Birr',
-              Timestamp: val.timestamp || "N/A",
-              salesname: val.salesname,
-              sex: val.sex,
-              days: val.days,
-              paymentMethod: val.paymentMethod,
-              phone: val.phone,
-            });
-          }
-        });
-      }
-  
-      const containerDiv = document.querySelector('.daily-amount');
-      containerDiv.innerHTML = `
-        <div class="cash"><h1>Cash</h1><h2>${total.Cash} Birr</h2></div>
-        <div class="cash"><h1>Telebirr</h1><h2>${total.Telebirr} Birr</h2></div>
-        <div class="cash"><h1>CBE</h1><h2>${total.CBE} Birr</h2></div>
-        <div class="cash"><h1>Dube</h1><h2>${total.Dube} Birr</h2></div>
-        <button id="downloadExcel">📥 Download Excel</button>
-      `;
-  
-      document.getElementById("downloadExcel").addEventListener("click", () => {
-        const dataForExcel = [...allData];
-        dataForExcel.push({});
-        dataForExcel.push({ Name: 'Total Cash', Room: total.Cash + ' Birr' });
-        dataForExcel.push({ Name: 'Total Telebirr', Room: total.Telebirr + ' Birr' });
-        dataForExcel.push({ Name: 'Total CBE', Room: total.CBE + ' Birr' });
-        dataForExcel.push({ Name: 'Total Dube', Room: total.Dube + ' Birr' });
-  
-        const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Timer Report');
-  
-        const today = new Date();
-        const fileName = `timer_${timerId}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.xlsx`;
-        XLSX.writeFile(workbook, fileName);
+  const modal = document.getElementById('removeCustomerModal');
+  modal.style.display = 'block';
+
+  document.getElementById('confirmRemoveBtn').onclick = async () => {
+    const password = document.getElementById('passwordInput').value;
+    const timerId = prompt("Enter the 5-digit Timer ID:");
+
+    if (!timerId) return alert("Timer ID is required.");
+    if (password !== '151584') {
+      alert('Incorrect password.');
+      return;
+    }
+
+    modal.style.display = 'none';
+    const paymentsSnap = await get(child(ref(database), 'Payments'));
+
+    let total = { Cash: 0, Telebirr: 0, CBE: 0, Dube: 0 };
+    const allData = [];
+
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach((snap) => {
+        const val = snap.val();
+        const amount = parseFloat(val.amountInBirr);
+        const method = val.paymentMethod?.toLowerCase();
+
+        if (val.timeid === timerId && !isNaN(amount)) {
+          if (method.includes("cash")) total.Cash += amount;
+          else if (method.includes("telebirr")) total.Telebirr += amount;
+          else if (method.includes("cbe")) total.CBE += amount;
+          else if (method.includes("debtors") || method.includes("dube")) total.Dube += amount;
+
+          allData.push({
+            Name: val.name || "N/A",
+            Room: val.selectedRoom || "N/A",
+            Amount: amount + ' Birr',
+            Method: val.paymentMethod || "N/A",
+            Timestamp: val.timestamp || "N/A",
+            salesname: val.salesname || "N/A",
+          });
+        }
       });
-    };
-  });
-    
+    }
+
+    const containerDiv = document.querySelector('.daily-amount');
+    containerDiv.innerHTML = `
+      <div class="cash"><h1>Cash</h1><h2>${total.Cash} Birr</h2></div>
+      <div class="cash"><h1>Telebirr</h1><h2>${total.Telebirr} Birr</h2></div>
+      <div class="cash"><h1>CBE</h1><h2>${total.CBE} Birr</h2></div>
+      <div class="cash"><h1>Dube</h1><h2>${total.Dube} Birr</h2></div>
+      <button id="downloadExcel">📥 Download Excel</button>
+      <button id="downloadWord">📄 Download Word</button>
+    `;
+
+    document.getElementById("downloadExcel").addEventListener("click", () => {
+      const dataForExcel = [...allData];
+      dataForExcel.push({});
+      dataForExcel.push({ Name: 'Total Cash', Room: total.Cash + ' Birr' });
+      dataForExcel.push({ Name: 'Total Telebirr', Room: total.Telebirr + ' Birr' });
+      dataForExcel.push({ Name: 'Total CBE', Room: total.CBE + ' Birr' });
+      dataForExcel.push({ Name: 'Total Dube', Room: total.Dube + ' Birr' });
+
+      const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Timer Report');
+
+      const today = new Date();
+      const fileName = `timer_${timerId}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    });
+
+    document.getElementById("downloadWord").addEventListener("click", async () => {
+      const {
+        Document, Packer, Paragraph, Table, TableRow, TableCell,
+        WidthType, TextRun, AlignmentType
+      } = window.docx;
+
+      const today = new Date();
+      const doc = new Document({
+        sections: [
+          {
+            properties: {},
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: `Home Land Hotel Daily Report`, bold: true, size: 36 }),
+                  new TextRun({ text: `\n${today.toDateString()}`, break: 1, size: 28 })
+                ]
+              }),
+              new Paragraph({
+                spacing: { after: 200 },
+                children: [
+                  new TextRun(`Salesperson: ${allData[0]?.salesname || "N/A"}`),
+                  new TextRun({ text: `\nTimer ID: ${timerId}`, break: 1 }),
+                  new TextRun({ text: `\nGenerated at: ${today.toLocaleTimeString()}`, break: 1 })
+                ]
+              }),
+              new Table({
+                rows: [
+                  new TableRow({
+                    children: ["Name", "Room", "Amount", "Method", "Timestamp"].map(header =>
+                      new TableCell({
+                        width: { size: 20, type: WidthType.PERCENTAGE },
+                        children: [new Paragraph({ children: [new TextRun({ text: header, bold: true })] })]
+                      })
+                    )
+                  }),
+                  ...allData.map(entry => new TableRow({
+                    children: ["Name", "Room", "Amount", "Method", "Timestamp"].map(field =>
+                      new TableCell({
+                        children: [new Paragraph(entry[field] || "N/A")]
+                      })
+                    )
+                  }))
+                ]
+              }),
+              new Paragraph({
+                spacing: { before: 300 },
+                children: [
+                  new TextRun({ text: `Total Cash: ${total.Cash} Birr`, break: 1 }),
+                  new TextRun({ text: `Total Telebirr: ${total.Telebirr} Birr`, break: 1 }),
+                  new TextRun({ text: `Total CBE: ${total.CBE} Birr`, break: 1 }),
+                  new TextRun({ text: `Total Dube: ${total.Dube} Birr`, break: 1 })
+                ]
+              })
+            ]
+          }
+        ]
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const blobURL = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobURL;
+      a.download = `timer_${timerId}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.docx`;
+      a.click();
+      URL.revokeObjectURL(blobURL);
+    });
+  };
+});
+
 
 
 

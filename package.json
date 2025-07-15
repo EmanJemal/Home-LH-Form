@@ -17,6 +17,7 @@
     "express": "^5.1.0",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.4.0",
+    "luxon": "^3.7.1",
     "node-telegram-bot-api": "^0.66.0",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
