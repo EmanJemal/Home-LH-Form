@@ -187,7 +187,7 @@ app.listen(PORT, () => {
 async function handleStartMyTime(chatId) {
   const db = getDatabase();
   const mainAdmin = process.env.Main_ADMIN_CHAT_ID;
-  const salesName = chatId == process.env.SALES_1_CHAT_ID ? "arafat" :
+  const salesName = chatId == process.env.SALES_1_CHAT_ID ? "Mahlete" :
                     chatId == process.env.SALES_2_CHAT_ID ? "amana" :
                     chatId == process.env.SALES_3_CHAT_ID ? "sifan" : "unknown";
 

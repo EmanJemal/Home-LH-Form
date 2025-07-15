@@ -274,8 +274,199 @@ function showRemovePopupORG(customerId, roomNumber, name) {
 
 
 const showBTN = document.querySelector(".show-btn");
+function parseCustomDate(dateStr) {
+    try {
+        const [datePart, timePart] = dateStr.split(' at ');
+        if (!datePart || !timePart) {
+            console.warn("parseCustomDate: Missing date or time in:", dateStr);
+            return null;
+        }
+
+        const parsedDate = new Date(`${datePart} ${timePart}`);
+        if (isNaN(parsedDate.getTime())) {
+            console.warn("parseCustomDate: Could not parse:", dateStr);
+            return null;
+        }
+
+        return parsedDate;
+    } catch (err) {
+        console.warn("parseCustomDate error:", err.message, "for", dateStr);
+        return null;
+    }
+}
+
+
+
+function convertTo24Hour(timeStr) {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes, seconds] = time.split(':');
+
+    hours = parseInt(hours, 10);
+
+    if (modifier === 'PM' && hours < 12) {
+        hours += 12;
+    } else if (modifier === 'AM' && hours === 12) {
+        hours = 0;
+    }
+
+    return `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`;
+}
+
 
 showBTN.addEventListener('click', () => {
+    const modal = document.getElementById('removeCustomerModal');
+    modal.style.display = 'block';
+
+  
+    document.getElementById('confirmRemoveBtn').onclick = async () => {
+        const password = document.getElementById('passwordInput').value;
+
+        if (password === '151584') {
+            modal.style.display = 'none';
+
+            const containerDiv = document.querySelector('.daily-amount');
+            containerDiv.innerHTML = `
+                <label for="fromDate">From Date:</label>
+                <input type="datetime-local" id="fromDate" />
+                <label for="toDate">To Date:</label>
+                <input type="datetime-local" id="toDate" />
+                <button id="calculate">Calculate</button>
+                <div id="results"></div>
+            `;
+
+            document.getElementById("calculate").addEventListener("click", async () => {
+                const fromInput = document.getElementById("fromDate").value;
+                const toInput = document.getElementById("toDate").value;
+                const from = new Date(fromInput);
+                const to = new Date(toInput);
+                
+                if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+                    alert("Please select a valid date and time range");
+                    return;
+                }
+
+                const paymentsSnap = await get(child(ref(database), 'Payments'));
+                let total = { Cash: 0, Telebirr: 0, CBE: 0, Dube: 0 };
+
+                if (paymentsSnap.exists()) {
+                    paymentsSnap.forEach(snap => {
+                        const val = snap.val();
+                        const rawTimestamp = val.timestamp;
+                        const paymentDate = parseCustomDate(rawTimestamp);
+                        const paymentMethod = val.paymentMethod?.toLowerCase();
+                        const amount = parseFloat(val.amountInBirr);
+
+                        if (
+                            paymentDate &&
+                            paymentDate.getTime() >= from.getTime() &&
+                            paymentDate.getTime() <= to.getTime() &&
+                            !isNaN(amount)
+                          ) {
+                            if (paymentMethod.includes("cash")) total.Cash += amount;
+                            else if (paymentMethod.includes("telebirr")) total.Telebirr += amount;
+                            else if (paymentMethod.includes("cbe")) total.CBE += amount;
+                            else if (paymentMethod.includes("debtors")) total.Dube += amount;
+                          } 
+                            else {
+                                console.warn("Skipping entry due to:");
+                                if (!paymentDate) console.warn("Invalid date:", rawTimestamp);
+                                else if (isNaN(amount)) console.warn("Invalid amount:", val.amountInBirr);
+                                else if (paymentDate.getTime() < from.getTime()) {
+                                  console.warn("Date too early:", paymentDate.toISOString(), "<", from.toISOString());
+                                }
+                                else if (paymentDate.getTime() > to.getTime()) {
+                                  console.warn("Date too late:", paymentDate.toISOString(), ">", to.toISOString());
+                                }
+                              
+                                                        }
+                          
+                    });
+                }
+
+                document.getElementById("results").innerHTML = `
+                    <div class="cash"><h1>Cash</h1><h2>${total.Cash} Birr</h2></div>
+                    <div class="cash"><h1>Telebirr</h1><h2>${total.Telebirr} Birr</h2></div>
+                    <div class="cash"><h1>CBE</h1><h2>${total.CBE} Birr</h2></div>
+                    <div class="cash"><h1>Dube</h1><h2>${total.Dube} Birr</h2></div>
+                `;
+
+                const allData = [];
+
+                if (paymentsSnap.exists()) {
+                    paymentsSnap.forEach((snap) => {
+                        const val = snap.val();
+                        const rawTimestamp = val.timestamp;
+                        const paymentDate = parseCustomDate(rawTimestamp);
+                        const amount = parseFloat(val.amountInBirr);
+                        const paymentMethod = val.paymentMethod;
+
+                        if (
+                            paymentDate &&
+                            paymentDate.getTime() >= from.getTime() &&
+                            paymentDate.getTime() <= to.getTime() &&
+                            !isNaN(amount)
+                        ) {
+                            allData.push({
+                                Name: val.name || "N/A",
+                                Room: val.selectedRoom || "N/A",
+                                Amount: amount + ' Birr',
+                                Timestamp: val.timestamp || "N/A",
+                                salesname: val.salesname,
+                                sex: val.sex,
+                                days: val.days,
+                                selectedRoom: val.selectedRoom,
+                                paymentMethod: paymentMethod,
+                                phone: val.phone,
+                            });
+                        }
+                    });
+                }
+
+
+                const dateDiffInMs = to - from;
+                const diffInDays = dateDiffInMs / (1000 * 60 * 60 * 24);
+
+                const allAmountsZero = total.Cash === 0 && total.Telebirr === 0 && total.CBE === 0 && total.Dube === 0;
+
+                if (allData.length === 0 && allAmountsZero) {
+                    alert("No data found in the selected range.");
+                    return;
+                }
+                else if (diffInDays > 3) {
+                    alert("more than 3 days")
+                }
+
+
+                // ➕ Add totals at the end of Excel
+                allData.push({});
+                allData.push({ Name: 'Total Cash', Room: total.Cash + ' Birr' });
+                allData.push({ Name: 'Total Telebirr', Room: total.Telebirr + ' Birr' });
+                allData.push({ Name: 'Total CBE', Room: total.CBE + ' Birr' });
+                allData.push({ Name: 'Total Dube', Room: total.Dube + ' Birr' });
+
+                // 📦 Export to Excel
+                const worksheet = XLSX.utils.json_to_sheet(allData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+                const today = new Date();
+                const months = [
+                  "jan", "feb", "mar", "apr", "may", "jun",
+                  "jul", "aug", "sep", "oct", "nov", "dec"
+                ];
+                const fileName = `report_${months[today.getMonth()]}_${today.getDate()}_${today.getFullYear()}.xlsx`;
+                
+                XLSX.writeFile(workbook, fileName);
+                });
+
+        } else {
+            alert('Incorrect password. Please try again.');
+        }
+           };
+});
+
+const showBTNTimer = document.querySelector(".showBTNTimer");
+
+showBTNTimer.addEventListener('click', () => {
     const modal = document.getElementById('removeCustomerModal');
     modal.style.display = 'block';
   
