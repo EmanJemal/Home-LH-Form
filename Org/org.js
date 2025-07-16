@@ -10,9 +10,8 @@ const submitButton = document.querySelector('#submit-btn');
 
 submitButton.addEventListener('click', () => {
     // Fetch form values
-    const nameInput = document.querySelector('.name-lable input');
-    const name = nameInput && nameInput.value.trim() !== '' ? nameInput.value.trim() : null;
-        const startDate = document.querySelector('.date-lable .start-date').value;
+    const name = document.querySelector('.name-lable input').value.trim() || null;
+    const startDate = document.querySelector('.date-lable .start-date').value;
     const endDate = document.querySelector('.date-lable .end-date').value;
     const noEmploy = document.querySelector('.employ-lable input').value;
     const noRoomReserved = document.querySelector('.noRoomReserved input').value;
