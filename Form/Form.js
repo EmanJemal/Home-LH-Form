@@ -234,22 +234,46 @@ submitButton.addEventListener('click', async() => {
             });
         
             if (selectedRoom && selectedRoom !== 'No room selected') {
-                updateRoomStatus(selectedRoom);
+                const roomRef = ref(database, `rooms/${selectedRoom}`);
+                get(roomRef).then(snapshot => {
+                    if (snapshot.exists() && snapshot.val() === 'booked') {
+                        alert("⛔ This room was just booked by someone else. Please choose another.");
+                        return;
+                    }
+            
+                    // Room is not booked, proceed with saving
+                    updateRoomStatus(selectedRoom);
+            
+                    set(userRef, userData)
+                        .then(() => {
+                            alert('Customer information submitted successfully!');
+                            location.reload();
+                            document.querySelectorAll('input').forEach(input => input.value = '');
+                            document.querySelector('#sex-options').value = 'male';
+                        })
+                        .catch((error) => {
+                            console.error('Error saving data: ', error);
+                            alert('Failed to submit customer information!');
+                        });
+            
+                    const amtRef = ref(database, `Payments/${customerId}`);
+                    set(amtRef, paymentData)
+                        .then(() => {
+                            console.log('Payment data successfully saved!');
+                        })
+                        .catch((error) => {
+                            console.error('Error saving payment data:', error);
+                            alert('Failed to submit customer payment information!');
+                        });
+            
+                }).catch(error => {
+                    console.error('Error checking room status:', error);
+                    alert('Failed to verify room status. Please try again.');
+                });
             }
+            
 
             
-            set(userRef, userData)
-            .then(() => {
-                alert('Customer information submitted successfully!');
-                location.reload();
-                // Optionally clear the form
-                document.querySelectorAll('input').forEach(input => input.value = '');
-                document.querySelector('#sex-options').value = 'male';
-            })
-            .catch((error) => {
-                console.error('Error saving data: ', error);
-                alert('Failed to submit customer information!');
-            });
 
 
             // Function to generate a 7-digit random number

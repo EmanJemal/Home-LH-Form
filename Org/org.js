@@ -211,33 +211,53 @@ orgOfEmployInput.addEventListener('input', () => {
 });
 
 // Fetch Room Pricing and Update DOM
-window.addEventListener('DOMContentLoaded', async () => {
-    const getRoomPricing = async () => {
-        try {
-            const roomPricingRef = ref(database, 'roomPricing');
-            const snapshot = await get(roomPricingRef);
-            if (snapshot.exists()) {
-                const roomPricing = snapshot.val();
-                updateRoomPrices(roomPricing);
-            } else {
-                console.log('No room pricing data available');
-            }
-        } catch (error) {
-            console.error('Error fetching room pricing:', error);
-        }
-    };
 
-    const updateRoomPrices = (roomPricing) => {
-        document.querySelectorAll('h4').forEach(roomTypeElement => {
-            const roomTypeClass = roomTypeElement.className.toLowerCase().split('-')[0];
-            const priceElement = roomTypeElement.nextElementSibling?.nextElementSibling;
-            if (priceElement && roomPricing[roomTypeClass]) {
-                priceElement.textContent = roomPricing[roomTypeClass];
-            } else if (priceElement) {
-                priceElement.textContent = 'N/A';
+window.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const roomPricingRef = ref(database, 'eachRoomsPricing');
+        const snapshot = await get(roomPricingRef);
+        if (!snapshot.exists()) {
+            console.log('No room pricing data available');
+            return;
+        }
+        const roomPricing = snapshot.val();
+
+        // For each room <li> in the DOM
+        document.querySelectorAll('.rooms_reserved li').forEach(li => {
+            const input = li.querySelector('input.floor-input');
+            if (!input) return;
+
+            const roomNumber = input.value; // e.g. "101"
+            const pricing = roomPricing[roomNumber];
+
+            if (pricing) {
+                // Update room type <h4>
+                const roomTypeElement = li.querySelector('h4');
+                if (roomTypeElement) {
+                    // Update class for styling, e.g. "single-type"
+                    roomTypeElement.className = `${pricing.roomType.toLowerCase()}-type`;
+                    // Update displayed text (capitalize first letter)
+                    roomTypeElement.textContent = pricing.roomType.charAt(0).toUpperCase() + pricing.roomType.slice(1);
+                }
+
+                // Update price <span>
+                const priceElement = li.querySelector('span.price');
+                if (priceElement) {
+                    priceElement.textContent = pricing.roomAmount + ' Birr';
+                }
+            } else {
+                // No pricing info for this room number
+                const roomTypeElement = li.querySelector('h4');
+                if (roomTypeElement) {
+                    roomTypeElement.textContent = 'N/A';
+                }
+                const priceElement = li.querySelector('span.price');
+                if (priceElement) {
+                    priceElement.textContent = 'N/A';
+                }
             }
         });
-    };
-
-    await getRoomPricing();
+    } catch (error) {
+        console.error('Error fetching room pricing:', error);
+    }
 });

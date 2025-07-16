@@ -162,6 +162,23 @@
     font-size: 15px;
     margin-top: 150px;
 }
+.rooms_reserved li {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* space between items */
+  }
+  
+  .rooms_reserved li input {
+    margin-right: 0.5rem;
+  }
+  
+  .room-label,
+  .room-type,
+  .room-price {
+    font-weight: normal;
+    font-size: 1rem;
+  }
+  
 @media(max-width: 552px){
     .rooms_reserved{
         margin-left: 10px;
