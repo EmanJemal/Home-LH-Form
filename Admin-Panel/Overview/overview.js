@@ -52,7 +52,7 @@ onValue(paymentsRef, (snapshot) => {
     const addisNow = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Addis_Ababa" }));
 
     const ethioStart = new Date(addisNow);
-    ethioStart.setHours(3, 0, 0, 0);
+    ethioStart.setHours(9, 0, 0, 0);
 
     if (addisNow < ethioStart) {
         ethioStart.setDate(ethioStart.getDate() - 1);
