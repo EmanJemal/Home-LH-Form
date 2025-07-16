@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Land Hotel</title>
+    <link rel="stylesheet" href="./Form/Form.css">
+    <link rel=stylesheet id=google-fonts-1-css href="https://fonts.googleapis.com/css?family=Poppins%3A100%2C100italic%2C200%2C200italic%2C300%2C300italic%2C400%2C400italic%2C500%2C500italic%2C600%2C600italic%2C700%2C700italic%2C800%2C800italic%2C900%2C900italic&amp;display=swap&amp;ver=6.6" media=all>
+    <script src=https://kit.fontawesome.com/4838fef60e.js crossorigin=anonymous></script></head>
+    <link rel="stylesheet" href="./General/general.css">
+    <link rel="shortcut icon" href="./Images/favicon-32x32.png" type=image/x-icon>
+    <link rel="stylesheet" href="./General/animation.css">
+    <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+</head>
+<body>
+    
+    
+
+    <!-- Popup Modal -->
+    <div id="removeCustomerModal" class="modal">
+        <div class="modal-content">
+            <h2>Recept</h2>
+
+
+
+            <div class="information-customer">
+
+                <div>
+                    <h4> </h4> <span class="name"></span>
+                </div>
+
+                <div>
+                    <h4> </h4><span class="age"></span>
+                </div>
+
+                <div>
+                    <h4> </h4> <span class="date-of-birth"></span>
+                </div>
+
+                <div>
+                    <h4> </h4> <span class="final-date"></span>
+                </div>
+
+                <div>
+                    <h4> </h4> <span class="payment-method"></span>
+                </div>
+
+                <div>
+                    <h4></h4> <span class="room"></span>
+                </div>
+
+                <div>
+                    <h4> </h4> <span class="Price"></span>
+                </div>
+
+            </div>
+            
+            <label for="passwordInput">Enter Password:</label>
+            <input type="password" id="passwordInput" placeholder="Enter password">
+            <button id="confirmRemoveBtn">Confirm</button>
+            <button id="cancelRemoveBtn">Cancel</button>
+        </div>
+    </div>
+    
+        
+
+    <div class="header">
+        <img src="./Images/Home Land Hotel Logo.png" alt="home-land-hotel-logo" class="logo">
+        <h1 class="title">Home Land Hotel</h1>
+    </div>
+
+    <div class="tools">
+
+        <a href="./Form/Form.html"><div class="add-users">
+            <i class="fa-solid fa-user-plus"></i>
+            <h1>ደምበኛ መመዝገብ</h1>
+        </div></a>
+
+        <a href="./Exsiting User/exsiting-users.html"><div class="exsiting-users">
+            <i class="fa-solid fa-user"></i>
+            <h1>ተጠቃሚ</h1>
+        </div></a>
+
+        <a href="./Debtors/Debtors.html"><div class="debtors">
+            <i class="fa-solid fa-money-bill-transfer"></i>
+            <h1>እዳ</h1>
+        </div></a>
+
+        <a href="./Org/org.html"><div class="user-data ">
+            <i class="fa-solid fa-users"></i>
+            <h1>የድርጅት ምዝገባ</h1>
+        </div></a>
+
+    </div>
+    
+    <div class="customer-info">
+        <h1>አጠቃላይ የየቀኑ ሽያጭ በ Cash Register የተቆረጠ</h1>
+
+        <div class="lables">
+
+            <div class="room-lable">
+                <h3 class="lable">Room</h1>
+                <input type="number" placeholder="room" class="name-of-customer name-customer">
+            </div>
+
+            <div class="Restaurant-lable">
+                <h3 class="lable">Restaurant</h1>
+                <input type="number" placeholder="Restaurant" class="name-of-customer name-customer">
+            </div>
+
+            <div class="dube-lable">
+                <h3 class="lable">Dube</h1>
+                <input type="number" placeholder="Dube" class="name-of-customer">
+            </div>
+
+            <div class="prepaid-lable">
+                <h3 class="lable">ቀድሞ የተከፈለ</h1>
+                <input type="number" placeholder="prepaid" class="name-of-customer">
+            </div>
+
+            <div class="void-lable">
+                <h3 class="lable">Void የተደረገ</h1>
+                <input type="number" placeholder="Void የተደረገ" class="name-of-days">
+            </div>
+            
+        </div>
+        
+    </div>
+
+    <div class="submission-btn">
+        <button id="submit-btn">Submit</button>
+    </div>
+
+
+    <script type="module" src="sales/sales.js"></script>
+</body>
+</html>

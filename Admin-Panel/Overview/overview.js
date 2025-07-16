@@ -251,51 +251,98 @@ onValue(roomsRef, (snapshot) => {
 
 // Function to update the UI based on room booking status
 function updateRoomStatusORG(roomNumber, status) {
-    // Create a new list item for each room
     const roomElement = document.createElement('li');
     roomElement.textContent = roomNumber;
-    roomElement.dataset.room = roomNumber; // Set room number as a data attribute
+    roomElement.dataset.room = roomNumber;
 
-    console.log(roomElement)
-
-    // Add appropriate class based on room status
     if (status === 'booked') {
         roomElement.classList.add('booked');
     } else {
         roomElement.classList.add('available');
     }
 
-    // Append the room to the correct floor based on the room number
     if (roomNumber.startsWith('10')) {
-        document.querySelector('.org-daily-table #floor-one').appendChild(roomElement);
+        document.querySelector('#org-floor-one').appendChild(roomElement);
     } else if (roomNumber.startsWith('20')) {
-        document.querySelector('.org-daily-table #floor-two').appendChild(roomElement);
+        document.querySelector('#org-floor-two').appendChild(roomElement);
     } else if (roomNumber.startsWith('30')) {
-        document.querySelector('.org-daily-table #floor-three').appendChild(roomElement);
+        document.querySelector('#org-floor-three').appendChild(roomElement);
     } else if (roomNumber.startsWith('40')) {
-        document.querySelector('.org-daily-table #floor-four').appendChild(roomElement);
+        document.querySelector('#org-floor-four').appendChild(roomElement);
     }
 }
 
+
 // Fetch room statuses from Firebase
 onValue(orgRef, (snapshot) => {
+    const container = document.getElementById('org-list');
+    container.innerHTML = ''; // Clear existing orgs
+
+    if (!snapshot.exists()) {
+        container.innerHTML = '<p>No organisation data found.</p>';
+        return;
+    }
+
     const orgData = snapshot.val();
 
-    console.log(orgData)
-    // Clear the previous room data to avoid duplication
-    document.querySelector('.org-daily-table #floor-one').innerHTML = '';
-    document.querySelector('.org-daily-table #floor-two').innerHTML = '';
-    document.querySelector('.org-daily-table #floor-three').innerHTML = '';
-    document.querySelector('.org-daily-table #floor-four').innerHTML = '';
-
-    // Iterate over rooms data and display rooms dynamically
-    Object.keys(orgData).forEach((roomNumber) => {
-        const status = orgData[roomNumber];
-        console.log(status)
-        updateRoomStatusORG(roomNumber, status);
+    Object.entries(orgData).forEach(([orgName, orgDetails]) => {
+        const {
+            bookedRooms = [],
+            startDate = 'N/A',
+            endDate = 'N/A',
+            noRoomReserved = 0,
+            amount = ''
+        } = orgDetails;
+    
+        const bookedRoomCount = bookedRooms.length || 0;
+        const roomList = bookedRooms.map(room => `<span class="room-bullet">• ${room}</span>`).join(' ');
+    
+        const uniqueId = orgName.replace(/\s+/g, '_') + '_amount';
+    
+        const html = `
+            <div class="org-card">
+                <h3>🏢 <strong>${orgName}</strong></h3>
+                <p>🗓 <strong>Start Date:</strong> ${startDate}</p>
+                <p>🗓 <strong>End Date:</strong> ${endDate}</p>
+                <p>🛏 <strong>Rooms in Hotel:</strong> ${bookedRoomCount}</p>
+                <p>🏨 <strong>Rooms Booked in Other Hotels:</strong> ${noRoomReserved}</p>
+                <p>📋 <strong>Reserved Room Numbers:</strong><br> ${roomList}</p>
+    
+                <div class="amount-section" style="margin-top: 15px;">
+                    <label for="${uniqueId}">💵 Amount:</label>
+                    <input type="number" id="${uniqueId}" value="${amount}" placeholder="Enter amount">
+                    <button data-org="${orgName}" class="save-amount-btn">Save</button>
+                </div>
+    
+                <hr>
+            </div>
+        `;
+    
+        container.innerHTML += html;
     });
+
+    // Event delegation to handle all Save buttons
+document.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('save-amount-btn')) {
+        const orgName = e.target.dataset.org;
+        const inputId = orgName.replace(/\s+/g, '_') + '_amount';
+        const amountValue = document.getElementById(inputId).value;
+
+        try {
+            await update(ref(database, `organisation_room/${orgName}`), {
+                amount: parseFloat(amountValue) || 0
+            });
+
+            alert(`✅ Amount updated for ${orgName}`);
+        } catch (error) {
+            console.error(`❌ Failed to update amount for ${orgName}:`, error);
+            alert(`❌ Failed to update amount for ${orgName}`);
+        }
+    }
 });
 
+    
+});
 
 
 
