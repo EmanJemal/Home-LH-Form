@@ -18,4 +18,4 @@ const database = getDatabase(app);
 const auth = getAuth(app);
 
 // Export all needed things
-export { database, auth, ref, set, get, update, remove, onValue, child, push, signInWithEmailAndPassword, onAuthStateChanged, signOut };
+export { database, getDatabase, auth, ref, set, get, update, remove, onValue, child, push, signInWithEmailAndPassword, onAuthStateChanged, signOut };

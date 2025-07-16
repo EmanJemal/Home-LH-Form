@@ -257,6 +257,7 @@ async function handleStartMyTime(chatId) {
   });
 
   await db.ref(`timer_id_ver/${timerId}`).set({
+    time: Date.now(),
     Used: true,
     salesname: salesName
   });
@@ -795,4 +796,88 @@ bot.on('message', async (msg) => {
       return bot.sendMessage(chatId, "❌ Incorrect Timer ID. Force leave cancelled.");
     }
   }
+});
+
+
+
+// Listen to any new title added under /Daily_Orders (e.g., "ASTU")
+const dailyOrdersRef = ref(database, 'Daily_Orders');
+
+onChildAdded(dailyOrdersRef, (snapshot) => {
+  const title = snapshot.key;
+  const titleRef = ref(database, `Daily_Orders/${title}`);
+
+  onChildAdded(titleRef, (orderSnap) => {
+    const data = orderSnap.val();
+    const msg = `
+🧾 *New Daily Order* under *${title}*
+🗓 Date: ${data.date || '-'}
+🍛 Food: ${data.food || '-'} (${data.foodAmount || 0})
+🥤 Drink: ${data.drink || '-'} (${data.drinkAmount || 0})
+☕ Hot Drink: ${data.hotDrink || '-'} (${data.hotAmount || 0})
+🛏 Room: ${data.room || '-'}
+    `.trim();
+
+    bot.sendMessage(mainAdmin, msg, { parse_mode: 'Markdown' });
+  });
+});
+
+const cashRef = ref(database, 'cashregister');
+
+// Listen for a new date node (e.g., 2025-07-16)
+onChildAdded(cashRef, (dateSnap) => {
+  const date = dateSnap.key;
+  const dateRef = ref(database, `cashregister/${date}`);
+
+  // Listen to new customer entries for that day
+  onChildAdded(dateRef, (entrySnap) => {
+    const val = entrySnap.val();
+    const msg = `
+💰 *New Cash Register Entry* for ${date}
+🛏 Room: ${val.room || 0}
+🍴 Restaurant: ${val.restaurant || 0}
+🥘 Dube: ${val.dube || 0}
+💳 Prepaid: ${val.prepaid || 'None'}
+❌ Void: ${val.void || 0}
+🕒 Time: ${val.timestamp || '-'}
+    `.trim();
+
+    bot.sendMessage(mainAdmin, msg, { parse_mode: 'Markdown' });
+  });
+});
+
+
+
+bot.onText(/^\/show$/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId.toString() !== mainAdmin) {
+    return bot.sendMessage(chatId, "⛔ You are not authorized.");
+  }
+
+  const snapshot = await get(ref(database, 'timer_id_ver'));
+  const data = snapshot.val();
+
+  if (!data) {
+    return bot.sendMessage(chatId, "❌ No active timer IDs found.");
+  }
+
+  const entries = Object.entries(data).map(([id, val]) => ({
+    id,
+    salesname: val.salesname || 'Unknown',
+    time: val.time || 0
+  }));
+
+  // Sort by time descending
+  const sorted = entries.sort((a, b) => b.time - a.time).slice(0, 5);
+
+  const message = sorted.map((entry, index) => {
+    const timeStr = DateTime.fromMillis(entry.time)
+      .setZone('Africa/Addis_Ababa')
+      .toFormat('yyyy-MM-dd hh:mm a');
+
+    return `${index + 1}. 🆔 ${entry.id} | 👤 ${entry.salesname} | 📅 ${timeStr}`;
+  }).join('\n');
+
+  bot.sendMessage(chatId, `🕒 Latest 5 Active Timers:\n\n${message}`);
 });

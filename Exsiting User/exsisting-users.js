@@ -41,7 +41,7 @@ function loadCustomers() {
                         const [date, time] = finalDate.split('T');
                         const [year, month, day] = date.split('-');
                 
-                        console.log({ year, month, day, time });
+                        //console.log({ year, month, day, time });
                 
                         // 🕒 Validate and Process `startingDate`
                         if (startingDate && startingDate.includes(' at ')) {
@@ -77,13 +77,13 @@ function loadCustomers() {
                                 exittime = `${diffMonths} month(s), ${remainingDays} day(s), ${formattedExitTime}`;
                                 formattedDate = `${month}-${day} <i class="fa-solid fa-arrow-right"></i> ${time}`;
                 
-                                console.log({
+                                /*console.log({
                                     exitYear,
                                     exitMonth,
                                     exitDay,
                                     exittime,
                                     formattedDate
-                                });
+                                });*/
                 
                             } catch (error) {
                                 console.error('Error processing startingDate:', error.message);
@@ -130,7 +130,7 @@ function loadCustomers() {
                 
                 orgSnapshot.forEach((childSnapshot) => {
                     const customer = childSnapshot.val();
-                    console.log(childSnapshot.val())
+                   // console.log(childSnapshot.val())
                     const roomNumber = customer.bookings;
                     const startingDate = customer.startDate;
                     const finalDate = customer.endDate;
@@ -140,7 +140,7 @@ function loadCustomers() {
 
                     for (let index = 0; index < roomNumber.length; index++) {
                             const element = roomNumber[index];
-                            console.log(element.room)
+                            //console.log(element.room)
                             const days = customer.days;
                             const paymentMethod = customer.paymentMethod;
                             const customerId = childSnapshot.key; // Get the customer ID
@@ -615,31 +615,39 @@ showBTNTimer.addEventListener('click', () => {
 
 
 // Function to remove the customer and their booked room
-function removeCustomerORG(customerId, roomNumber, name) {
-    // Reference to the organisation's room booking
-    const bookingRef = ref(database, `organisation_room/${customerId}/bookings`);
+function removeCustomerORG(orgKey, roomNumber, bookingName) {
+  const orgRef = ref(database, `organisation_room/${bookingName}`); // ✅ safe path
 
-    get(bookingRef)
-        .then((snapshot) => {
-            if (snapshot.exists()) {
-                const bookings = snapshot.val();
-                const updatedBookings = bookings.filter(booking => booking.room !== roomNumber || booking.name !== name);
+  console.log("📍 Checking path: organisation_room/" + bookingName); // will log "m_k"
 
-                // Update the bookings array without the removed room
-                return set(bookingRef, updatedBookings);
-            } else {
-                console.warn('No bookings found for this organisation.');
-                return Promise.reject('No bookings to remove.');
-            }
-        })
-        .then(() => {
-            console.log('Room booking removed successfully');
-            loadCustomers(); // Reload the customer list after removal
-        })
-        .catch((error) => {
-            console.error('Error removing room booking:', error);
-        });
+  get(orgRef)
+    .then((snapshot) => {
+      if (!snapshot.exists()) throw new Error("Organisation does not exist.");
+
+      const orgData = snapshot.val();
+      const bookings = Array.isArray(orgData.bookings) ? orgData.bookings : [];
+      const updatedBookings = bookings.filter(
+        (b) => b.room !== roomNumber || b.name !== bookingName
+      );
+
+      const bookedRooms = Array.isArray(orgData.bookedRooms) ? orgData.bookedRooms : [];
+      const updatedBookedRooms = bookedRooms.filter((room) => room !== roomNumber);
+
+      return update(orgRef, {
+        bookings: updatedBookings,
+        bookedRooms: updatedBookedRooms
+      });
+    })
+    .then(() => {
+      console.log('✅ Room and booking removed successfully');
+      loadCustomers();
+    })
+    .catch((error) => {
+      console.error('❌ Failed to remove booking:', error.message);
+    });
 }
+
+
 
 document.getElementById('exportExcelBtn').addEventListener('click', async () => {
     const customerSnapshot = await get(child(ref(database), 'customers'));
@@ -662,21 +670,21 @@ document.getElementById('exportExcelBtn').addEventListener('click', async () => 
     }
 
     if (orgSnapshot.exists()) {
-      orgSnapshot.forEach((childSnap) => {
-        const org = childSnap.val();
-        if (Array.isArray(org.bookings)) {
-          org.bookings.forEach((booking) => {
-            allData.push({
-              Name: booking.name + ' (ORG: ' + org.name + ")",
-              Room: booking.room,
-              Days: org.days,
-              Payment: org.paymentMethod,
-              Start: org.startDate,
-              End: org.endDate,
-            });
+      orgSnapshot.forEach((childSnapshot) => {
+        const orgKey = childSnapshot.key; // ✅ like "m_k"
+            const customer = childSnapshot.val();
+      
+        for (let index = 0; index < customer.bookings.length; index++) {
+          const booking = customer.bookings[index];
+      
+          // ...
+          listItem.querySelector('.org-leaved').addEventListener('click', () => {
+            showRemovePopupORG(orgKey, element.room, element.name);
           });
+        
         }
       });
+      
     }
 
     if (allData.length === 0) {
