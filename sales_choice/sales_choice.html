@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Land Hotel</title>
+    <link rel="stylesheet" href="../Form/Form.css">
+    <link rel=stylesheet id=google-fonts-1-css href="https://fonts.googleapis.com/css?family=Poppins%3A100%2C100italic%2C200%2C200italic%2C300%2C300italic%2C400%2C400italic%2C500%2C500italic%2C600%2C600italic%2C700%2C700italic%2C800%2C800italic%2C900%2C900italic&amp;display=swap&amp;ver=6.6" media=all>
+    <script src=https://kit.fontawesome.com/4838fef60e.js crossorigin=anonymous></script></head>
+    <link rel="stylesheet" href="../General/general.css">
+    <link rel="shortcut icon" href="../Images/favicon-32x32.png" type=image/x-icon>
+    <link rel="stylesheet" href="../General/animation.css">
+    <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+    <style>
+        *,
+        body {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Poppins", poppin;
+        }
+        .header {
+            width: 100%;
+            border-bottom-color: #fc6b13;
+            border-bottom-style: solid;
+            border-bottom-width: 2px;
+        }
+        .header .title{
+            display: inline-block;
+            text-align: center;
+        }
+        .logo{
+            width: 70px;
+            display: inline-block;
+            margin-top: 10px;
+            text-align: center;
+        }
+        a{
+            text-decoration: none;
+        }
+        .tools-new{
+            width: 100%;
+            padding: 0px 20px;
+            height: 100px;
+            margin: 100px;
+            border-radius: 10px;
+
+            align-items: center;   
+            justify-content: center; 
+            text-align: center;  
+
+            border-top-color: #67a8df;
+            border-top-style: solid;
+            border-top-width: 2px;
+
+            border-left-color: #67a8df;
+            border-left-style: solid;
+            border-left-width: 2px;
+
+            border-right-color: #67a8df;
+            border-right-style: solid;
+            border-right-width: 2px;
+
+            display: grid;
+            grid-template-columns: repeat(2, 50%);
+            column-gap: 10px;
+        }
+        .tools-new i{
+            font-size: 30px;
+            color: #fc6b13;
+        }
+        .tools-new h1{
+            font-size: 20px;
+            color: #fc6b13;
+        }
+        .tools-new div{
+            margin-top: 5px;
+            display: flex;         
+            align-items: center;   
+            justify-content: center; 
+            flex-direction: column; 
+            text-align: center;   
+            gap: 10px;   
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .tools-new div:hover{
+            background-color: #fc6b13;
+        }
+        .tools-new div:hover i, .tools-new div:hover h1 {
+            color: white;
+        }
+        .tools-new .active{
+            background-color: #fc6b13;
+        }
+        .tools-new .active h1{
+            color: white;
+        }
+        .tools-new .active i{
+            color: white;
+        }
+        li {
+            list-style: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    
+        <!-- Loading Animation -->
+        <div id="loading-overlay">
+            <dotlottie-player src="https://lottie.host/ed409efc-bd04-4cd0-8bc4-e9a50c5d1cb5/dJYpJ6yb21.lottie" background="transparent" speed="1" style="width: 200px; height: 200px" loop autoplay></dotlottie-player>
+        </div>
+    
+
+ <!-- Popup Modal -->
+ <div id="removeCustomerModal" class="modal">
+    <div class="modal-content">
+    <h2>Confirm Action</h2>
+    <label for="passwordInput">Enter Password:</label>
+    <input type="password" id="passwordInput" placeholder="Enter password">
+    <button id="confirmRemoveBtn">Confirm</button>
+    <button id="cancelRemoveBtn">Cancel</button>
+    </div>
+</div>
+
+    <div class="header">
+        <a href="sales.html"><img src="../Images/Home Land Hotel Logo.png" alt="home-land-hotel-logo" class="logo"></a>
+        <h1 class="title">Home Land Hotel</h1>
+    </div>
+
+    <div class="tools">
+
+        <a href="../index.h"><div class="add-users active">
+            <i class="fa-solid fa-user-plus"></i>
+            <h1>ደምበኛ መመዝገብ</h1>
+        </div></a>
+
+        <a href="../Exsiting User/exsiting-users.html"><div class="exsiting-users">
+            <i class="fa-solid fa-user"></i>
+            <h1>ተጠቃሚ</h1>
+        </div></a>
+
+        <a href="../Debtors/Debtors.html"><div class="debtors">
+            <i class="fa-solid fa-money-bill-transfer"></i>
+            <h1>እዳ</h1>
+        </div></a>
+
+        <a href="../Org/org.html"><div class="user-data ">
+            <i class="fa-solid fa-users"></i>
+            <h1>የድርጅት ምዝገባ</h1>
+        </div></a>
+        <a href="../sales_choice/sales_choice.html"><div class="user-data ">
+            <i class="fa-solid fa-envelope"></i>
+            <h1>ምዝገባ</h1>
+        </div></a>
+
+    </div>
+    
+
+    <div class="tools-new" style="width: 500px;">
+        <div class="add-users" id="rahelBtn">
+            <i class="fa-solid fa-user"></i>
+            <h1>Rahel</h1>
+        </div>
+    
+        <div class="exsiting-users" id="addisBtn">
+            <i class="fa-solid fa-user"></i>
+            <h1>Addis</h1>
+        </div>
+    </div>
+    
+    <a href=""></a>
+    <script>
+        const modal = document.getElementById("removeCustomerModal");
+        const confirmBtn = document.getElementById("confirmRemoveBtn");
+        const cancelBtn = document.getElementById("cancelRemoveBtn");
+        const passwordInput = document.getElementById("passwordInput");
+      
+        let expectedPassword = "";
+        let redirectPage = "";
+      
+        document.getElementById("rahelBtn").addEventListener("click", () => {
+          expectedPassword = "1900";
+          redirectPage = "../rahel.html"; // 🔁 Change to your actual Rahel page
+          openModal();
+        });
+      
+        document.getElementById("addisBtn").addEventListener("click", () => {
+          expectedPassword = "1500";
+          redirectPage = "../sales.html"; // 🔁 Change to your actual Addis page
+          openModal();
+        });
+      
+        function openModal() {
+          modal.style.display = "block";
+          passwordInput.value = "";
+        }
+      
+        cancelBtn.addEventListener("click", () => {
+          modal.style.display = "none";
+        });
+      
+        confirmBtn.addEventListener("click", () => {
+          const entered = passwordInput.value;
+          if (entered === expectedPassword) {
+            window.location.href = redirectPage;
+          } else {
+            alert("Incorrect password.");
+          }
+        });
+      
+        // Optional: Close modal when clicking outside of it
+        window.onclick = function(event) {
+          if (event.target === modal) {
+            modal.style.display = "none";
+          }
+        };
+      </script>
+      
+    <script src="../General/animation.js"></script>
+    <script src="../Form/fieldC.js"></script>
+    <script src="../Script/fullScreen.js"></script>
+    <script src="../Form/Form.js" type="module"></script>
+</body>
+</html>

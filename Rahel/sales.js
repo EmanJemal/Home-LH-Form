@@ -1,7 +1,6 @@
 import { getDatabase, database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
 import { auth, onAuthStateChanged } from '../Script/firebase.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     // 🚨 Not authenticated, redirect to login page
@@ -164,7 +163,6 @@ closeModal.addEventListener('click', () => {
   receiptModal.style.display = 'none';
   window.location.reload();
 });
-
 async function loadExistingOrders() {
   const snapshot = await get(ref(database, 'Daily_Orders'));
   const data = snapshot.val();
@@ -172,44 +170,74 @@ async function loadExistingOrders() {
   if (!data) return;
 
   for (const title in data) {
-    const orderList = Object.values(data[title]);
+    if (title.startsWith('__meta')) continue; // Skip meta titles
 
-    // Initialize totals
-    let totalUP = 0;
-    let totalTP = 0;
-    let totalFoodAmount = 0;
-    let totalDrinkAmount = 0;
-    let totalHotAmount = 0;
+    const orderList = Object.entries(data[title]);
 
-    const rowsHTML = orderList.map(entry => {
-      totalUP += parseFloat(entry.u_p || 0);
-      totalTP += parseFloat(entry.t_p || 0);
-      totalFoodAmount += parseFloat(entry.foodAmount || 0);
-      totalDrinkAmount += parseFloat(entry.drinkAmount || 0);
-      totalHotAmount += parseFloat(entry.hotAmount || 0);
+    const orderEntries = Object.entries(data[title])
+      .filter(([key, _]) => !key.startsWith('__meta'))
+      .map(([_, value]) => value);
 
-      return `
-        <tr>
-          <td>${entry.date || ''}</td>
-          <td>${entry.Name || ''}</td>
-          <td>${entry.room_ዝርዝር || ''}</td>
-          <td>${entry.room_ብዛት || ''}</td>
-          <td>${entry.u_p || ''}</td>
-          <td>${entry.t_p || ''}</td>
-          <td>${entry.food || ''}</td>
-          <td>${entry.foodAmount || 0}</td>
-          <td>${entry.drink || ''}</td>
-          <td>${entry.drinkAmount || 0}</td>
-          <td>${entry.hotDrink || ''}</td>
-          <td>${entry.hotAmount || 0}</td>
-        </tr>
-      `;
-    }).join('');
+    const metaKeys = Object.keys(data[title]).filter(k => k.startsWith('__meta'));
+    const metas = metaKeys.map(key => ({ key, ...data[title][key] }));
+
+    let totalUP = 0, totalTP = 0, totalFoodAmount = 0, totalDrinkAmount = 0, totalHotAmount = 0;
+
+    const rowsHTML = orderList
+      .filter(([key]) => !key.startsWith('__meta')) // exclude meta from table rows
+      .map(([_, entry]) => {
+        totalUP += parseFloat(entry.u_p || 0);
+        totalTP += parseFloat(entry.t_p || 0);
+        totalFoodAmount += parseFloat(entry.foodAmount || 0);
+        totalDrinkAmount += parseFloat(entry.drinkAmount || 0);
+        totalHotAmount += parseFloat(entry.hotAmount || 0);
+
+        return `
+          <tr>
+            <td>${entry.date || ''}</td>
+            <td>${entry.Name || ''}</td>
+            <td>${entry.room_ዝርዝር || ''}</td>
+            <td>${entry.room_ብዛት || ''}</td>
+            <td>${entry.u_p || ''}</td>
+            <td>${entry.t_p || ''}</td>
+            <td>${entry.food || ''}</td>
+            <td>${entry.foodAmount || 0}</td>
+            <td>${entry.drink || ''}</td>
+            <td>${entry.drinkAmount || 0}</td>
+            <td>${entry.hotDrink || ''}</td>
+            <td>${entry.hotAmount || 0}</td>
+          </tr>
+        `;
+      }).join('');
+
+    // Calculate total amount from metas
+    const totalMetaAmount = metas.reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
+
+    // Calculate Left Price
+    const totalPrice = totalTP + totalFoodAmount + totalDrinkAmount + totalHotAmount;
+    const leftPrice = totalPrice - totalMetaAmount;
+
+    // Prepare meta display HTML
+    const metaDisplayHTML = metas.length > 0
+      ? `<div class="meta-info" style="margin-bottom: 10px;">
+          <strong>Saved Payments:</strong>
+          <ul>
+            ${metas.map(m => `<li>${m.key}: ${m.amount || 0} (Saved at: ${new Date(m.savedAt).toLocaleString()})</li>`).join('')}
+          </ul>
+        </div>`
+      : `<div class="meta-info" style="margin-bottom: 10px;">No saved payments yet.</div>`;
+
+    // Left price display
+    const leftPriceHTML = `<div class="left-price" style="font-weight: bold; margin-bottom: 15px;">
+      Left Price: ${leftPrice.toFixed(2)}
+    </div>`;
 
     const wrapper = document.createElement('div');
     wrapper.className = 'container';
     wrapper.innerHTML = `
-      <h2>${title}</h2>
+      <h2>${title}
+        <button id="export-${title}" style="margin-left: 20px;" class="export">Export to Excel</button>    
+      </h2>
       <table>
         <thead>
           <tr>
@@ -231,22 +259,200 @@ async function loadExistingOrders() {
           ${rowsHTML}
           <tr><td colspan="12"><hr></td></tr>
           <tr>
-            <td colspan="4" style="text-align:left; font-size: 20px; font-weight: bold;">TOTAL</td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalUP}</td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalTP}</td>
+            <td colspan="4" style="text-align:left; font-size: 20px; font-weight: bold;">TOTAL = ${totalPrice}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalUP.toFixed(2)}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalTP.toFixed(2)}</td>
             <td></td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalFoodAmount}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalFoodAmount.toFixed(2)}</td>
             <td></td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalDrinkAmount}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalDrinkAmount.toFixed(2)}</td>
             <td></td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalHotAmount}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalHotAmount.toFixed(2)}</td>
           </tr>
         </tbody>
       </table>
+
+      ${metaDisplayHTML}
+      ${leftPriceHTML}
+
+      <div class="div">
+        <input type="text" placeholder="Amount" class="amount-id name-customer" />
+        <input type="text" placeholder="Screenshot Id" class="screenshotId name-customer" />
+        <input type="text" placeholder="Screenshot Id" class="screenshotId name-customer" />
+        <input type="text" placeholder="Screenshot Id" class="screenshotId name-customer" />
+      </div>
+      <div class="buttons-existing">
+        <button class="save-btn-existing" id="saveBtn-existing">Save</button>
+      </div>
     `;
+
+    // Save button logic (with correct meta key creation)
+    setTimeout(() => {
+      const saveBtn = wrapper.querySelector('#saveBtn-existing');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+          const amountInput = wrapper.querySelector('.amount-id');
+          const screenshotInputs = wrapper.querySelectorAll('.screenshotId');
+
+          const amountValue = amountInput.value.trim();
+          const screenshotIds = Array.from(screenshotInputs).map(input => input.value.trim()).filter(val => val !== '');
+
+          if (!amountValue && screenshotIds.length === 0) {
+            alert("Please enter an amount or at least one Screenshot ID.");
+            return;
+          }
+
+          try {
+            let metaIndex = 1;
+            let metaKey = '__meta__';
+
+            while (data[title][metaKey]) {
+              metaIndex++;
+              metaKey = `__meta${metaIndex}__`;
+            }
+
+            await set(ref(database, `Daily_Orders/${title}/${metaKey}`), {
+              savedAt: new Date().toISOString(),
+              amount: amountValue,
+              screenshotIds: screenshotIds
+            });
+
+            alert("Saved successfully!");
+            window.location.reload();
+          } catch (error) {
+            console.error("Error saving data:", error);
+            alert("Failed to save. Check console for error.");
+          }
+        });
+      }
+    }, 0);
+
     existingOrdersContainer.appendChild(wrapper);
+
+    // Export button logic (unchanged)
+    setTimeout(() => {
+      const exportBtn = document.getElementById(`export-${title}`);
+      if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+          const header = [
+            "Date", "Name", "room_ዝርዝር", "room_ብዛት", "U/P", "T/P",
+            "Food", "Amount", "Drink", "Amount", "Hot Drink", "Amount"
+          ];
+    
+          const metaPayments = [];
+          let totalMeta = 0;
+    
+          const rows = orderList
+            .filter(([key]) => !key.startsWith('__meta'))
+            .map(([_, entry]) => [
+              entry.date || '',
+              entry.Name || '',
+              entry.room_ዝርዝር || '',
+              entry.room_ብዛት || '',
+              entry.u_p || '',
+              entry.t_p || '',
+              entry.food || '',
+              entry.foodAmount || 0,
+              entry.drink || '',
+              entry.drinkAmount || 0,
+              entry.hotDrink || '',
+              entry.hotAmount || 0
+            ]);
+
+          // Collect meta payments
+
+          orderList
+            .filter(([key]) => key.startsWith('__meta'))
+            .forEach(([key, val], idx) => {
+              const metaName = idx === 0 ? "ክፈያ_1" : `ክፈያ_ ${idx + 1}`;
+              metaPayments.push([metaName, parseFloat(val.amount || 0).toFixed(2)]);
+              totalMeta += parseFloat(val.amount || 0);
+            });
+
+          const totalPayment = totalTP + totalFoodAmount + totalDrinkAmount + totalHotAmount;
+          const leftToPay = (totalPayment - totalMeta).toFixed(2);
+
+          const totalRow = [
+            "TOTAL", "", "", "",
+            totalUP.toFixed(2), totalTP.toFixed(2),
+            "", totalFoodAmount.toFixed(2),
+            "", totalDrinkAmount.toFixed(2),
+            "", totalHotAmount.toFixed(2)
+          ];
+
+          // Final rows to export
+          const allData = [
+            [`${title} By Home Land Hotel`], // Header title
+            header,                          // Column headers
+            ...rows,                         // Data rows
+            totalRow,                        // Totals row
+            [],                              // Spacer row
+            ["Payments Made"],               // Meta payment title
+            ...metaPayments,                 // Meta payment rows
+            ["በአጠቃላይ መከፈል ያለበት", totalPayment.toFixed(2)],
+            ["እስካሁን በአጠቃላይ የተከፈለ", totalMeta.toFixed(2)],
+            ["ቀሪ", leftToPay]
+          ];
+
+    
+          const worksheet = XLSX.utils.aoa_to_sheet(allData);
+    
+          // Cell styling
+          const borderStyle = {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" }
+          };
+    
+          const cellStyle = {
+            font: { sz: 12 },
+            border: borderStyle
+          };
+    
+          const headerStyle = {
+            font: { bold: true, sz: 14 },
+            border: borderStyle
+          };
+    
+          const totalStyle = {
+            font: { bold: true, sz: 12 },
+            border: borderStyle
+          };
+    
+          const titleStyle = {
+            font: { bold: true, sz: 18 },
+          };
+    
+          const range = XLSX.utils.decode_range(worksheet['!ref']);
+          for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+              const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
+              if (!worksheet[cellAddr]) continue;
+    
+              if (R === 0) {
+                worksheet[cellAddr].s = titleStyle;
+              } else if (R === 1) {
+                worksheet[cellAddr].s = headerStyle;
+              } else if (R === rows.length + 2) {
+                worksheet[cellAddr].s = totalStyle;
+              } else {
+                worksheet[cellAddr].s = cellStyle;
+              }
+            }
+          }
+    
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, title);
+          XLSX.writeFile(workbook, `${title}-orders.xlsx`);
+        });
+      }
+    }, 0);
+    
+
   }
 }
+
 
 loadExistingOrders();
 
