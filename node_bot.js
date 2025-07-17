@@ -811,19 +811,29 @@ bot.on('message', async (msg) => {
 });
 
 
+const seenDailyOrders = new Set();
+const seenCashEntries = new Set();
 
-// To get a ref:
+// Daily Orders
 const dailyOrdersRef = db.ref('Daily_Orders');
-
-// Then listen (note, Admin SDK listeners differ, see below)
 dailyOrdersRef.on('child_added', (snapshot) => {
   const title = snapshot.key;
   const titleRef = db.ref(`Daily_Orders/${title}`);
+
   titleRef.on("child_added", (orderSnap) => {
+    const orderKey = `${title}/${orderSnap.key}`;
+    if (seenDailyOrders.has(orderKey)) return;
+    seenDailyOrders.add(orderKey);
+
     const data = orderSnap.val();
     const msg = `
 🧾 *New Daily Order* under *${title}*
-🗓 Date: ${data.date || '-'}
+ Date: ${data.date || '-'}
+ Name: ${data.Name || '-'}
+ room_ዝርዝር: ${data.room_ዝርዝር || '-'}
+ room_ብዛት: ${data.room_ብዛት || '-'}
+ U/P: ${data.u_p || '-'}
+ T/P: ${data.t_p || '-'}
 🍛 Food: ${data.food || '-'} (${data.foodAmount || 0})
 🥤 Drink: ${data.drink || '-'} (${data.drinkAmount || 0})
 ☕ Hot Drink: ${data.hotDrink || '-'} (${data.hotAmount || 0})
@@ -834,17 +844,17 @@ dailyOrdersRef.on('child_added', (snapshot) => {
   });
 });
 
+// Cash Register
 const cashRef = db.ref('cashregister');
-
-// Listen for a new date node (e.g., 2025-07-16)
-
-  cashRef.on("child_added", (dateSnap) => {
+cashRef.on("child_added", (dateSnap) => {
   const date = dateSnap.key;
   const dateRef = db.ref(`cashregister/${date}`);
 
-  // Listen to new customer entries for that day
+  dateRef.on("child_added", (entrySnap) => {
+    const entryKey = `${date}/${entrySnap.key}`;
+    if (seenCashEntries.has(entryKey)) return;
+    seenCashEntries.add(entryKey);
 
-    dateRef.on("child_added", (entrySnap) => {
     const val = entrySnap.val();
     const msg = `
 💰 *New Cash Register Entry* for ${date}
@@ -859,7 +869,6 @@ const cashRef = db.ref('cashregister');
     bot.sendMessage(mainAdmin, msg, { parse_mode: 'Markdown' });
   });
 });
-
 
 
 bot.onText(/^\/show$/, async (msg) => {

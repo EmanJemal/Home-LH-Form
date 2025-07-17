@@ -231,15 +231,15 @@ async function loadExistingOrders() {
           ${rowsHTML}
           <tr><td colspan="12"><hr></td></tr>
           <tr>
-            <td colspan="4" style="text-align:left; font-weight: bold;">TOTAL</td>
-            <td style="font-weight: bold;">${totalUP}</td>
-            <td style="font-weight: bold;">${totalTP}</td>
+            <td colspan="4" style="text-align:left; font-size: 20px; font-weight: bold;">TOTAL</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalUP}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalTP}</td>
             <td></td>
-            <td style="font-weight: bold;">${totalFoodAmount}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalFoodAmount}</td>
             <td></td>
-            <td style="font-weight: bold;">${totalDrinkAmount}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalDrinkAmount}</td>
             <td></td>
-            <td style="font-weight: bold;">${totalHotAmount}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalHotAmount}</td>
           </tr>
         </tbody>
       </table>
