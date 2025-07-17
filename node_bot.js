@@ -6,7 +6,7 @@ import express from 'express';
 import XLSX from 'xlsx';
 import fs from 'fs';
 import { DateTime } from 'luxon';
-
+import admin from 'firebase-admin';
 
 
 const app = express();
@@ -24,6 +24,18 @@ initializeApp({
   credential: cert(decodedServiceAccount),
   databaseURL: "https://home-land-hotel-default-rtdb.firebaseio.com" // your DB url here
 });
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://your-db.firebaseio.com"
+  });
+} else {
+  // reuse existing app
+  admin.app();
+}
+
+const db = admin.database();
 
 export const database = getDatabase();
 
@@ -800,14 +812,14 @@ bot.on('message', async (msg) => {
 
 
 
-// Listen to any new title added under /Daily_Orders (e.g., "ASTU")
-const dailyOrdersRef = ref(database, 'Daily_Orders');
+// To get a ref:
+const dailyOrdersRef = db.ref('Daily_Orders');
 
-onChildAdded(dailyOrdersRef, (snapshot) => {
+// Then listen (note, Admin SDK listeners differ, see below)
+dailyOrdersRef.on('child_added', (snapshot) => {
   const title = snapshot.key;
-  const titleRef = ref(database, `Daily_Orders/${title}`);
-
-  onChildAdded(titleRef, (orderSnap) => {
+  const titleRef = db.ref(`Daily_Orders/${title}`);
+  titleRef.on("child_added", (orderSnap) => {
     const data = orderSnap.val();
     const msg = `
 🧾 *New Daily Order* under *${title}*
@@ -822,15 +834,17 @@ onChildAdded(dailyOrdersRef, (snapshot) => {
   });
 });
 
-const cashRef = ref(database, 'cashregister');
+const cashRef = db.ref('cashregister');
 
 // Listen for a new date node (e.g., 2025-07-16)
-onChildAdded(cashRef, (dateSnap) => {
+
+  cashRef.on("child_added", (dateSnap) => {
   const date = dateSnap.key;
-  const dateRef = ref(database, `cashregister/${date}`);
+  const dateRef = db.ref(`cashregister/${date}`);
 
   // Listen to new customer entries for that day
-  onChildAdded(dateRef, (entrySnap) => {
+
+    dateRef.on("child_added", (entrySnap) => {
     const val = entrySnap.val();
     const msg = `
 💰 *New Cash Register Entry* for ${date}
@@ -855,8 +869,8 @@ bot.onText(/^\/show$/, async (msg) => {
     return bot.sendMessage(chatId, "⛔ You are not authorized.");
   }
 
-  const snapshot = await get(ref(database, 'timer_id_ver'));
-  const data = snapshot.val();
+const snapshot = await db.ref('timer_id_ver').once('value');
+const data = snapshot.val();
 
   if (!data) {
     return bot.sendMessage(chatId, "❌ No active timer IDs found.");
