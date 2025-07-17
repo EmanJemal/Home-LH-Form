@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Land Hotel</title>
+    <link rel="stylesheet" href="./Form/Form.css">
+    <link rel=stylesheet id=google-fonts-1-css href="https://fonts.googleapis.com/css?family=Poppins%3A100%2C100italic%2C200%2C200italic%2C300%2C300italic%2C400%2C400italic%2C500%2C500italic%2C600%2C600italic%2C700%2C700italic%2C800%2C800italic%2C900%2C900italic&amp;display=swap&amp;ver=6.6" media=all>
+    <script src=https://kit.fontawesome.com/4838fef60e.js crossorigin=anonymous></script></head>
+    <link rel="stylesheet" href="./General/general.css">
+    <link rel="shortcut icon" href="./Images/favicon-32x32.png" type=image/x-icon>
+    <link rel="stylesheet" href="./General/animation.css">
+    <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+    <style>
+        * {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  /*background: #f7f9fb;*/
+  color: #333;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-bottom: 20px;
+}
+.customer-info{
+  display: none;
+}
+.container {
+    width: 100%;
+    margin: auto;
+}
+
+h2 {
+  margin-bottom: 20px;
+  text-align: center;
+  color: #222;
+}
+.height{
+  height: 200px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+th{
+  padding: 12px 14px;
+}
+th {
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+td {
+  padding: 12px 5px;
+}
+th {
+  background: #f4f6f8;
+  font-weight: 600;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+}
+
+.add-btn, .save-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.add-btn {
+  background-color: #3498db;
+  color: white;
+  font-size: 18px;
+}
+
+.save-btn {
+  background-color: #2ecc71;
+  color: white;
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 5;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.3);
+}
+
+.modal-content {
+  background-color: #fff;
+  margin: 8% auto;
+  padding: 30px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 600px;
+  position: relative;
+}
+
+.modal-content h3 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.modal-content button {
+  padding: 10px 15px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.close {
+  position: absolute;
+  right: 20px;
+  top: 15px;
+  font-size: 24px;
+  cursor: pointer;
+}
+/* Add this below the other CSS in style.css */
+
+tbody input {
+  width: 100%;
+  border: none;
+  padding: 8px;
+  background: #f9f9f9;
+  border-bottom: 1px solid #ddd;
+  font-size: 14px;
+}
+
+tbody input:focus {
+  outline: none;
+  background: #fff;
+  border-bottom: 1px solid #3498db;
+}
+input{
+    padding: 8px;
+    border-radius: 3px;
+    margin-left: 15px;
+    font-weight: bold;
+    font-size: 15px;
+    margin-top: 13px;
+}
+.submission-btn{
+  display: none;
+}
+    </style>
+</head>
+<body>
+    
+    
+
+    <!-- Popup Modal -->
+    <div id="removeCustomerModal" class="modal">
+        <div class="modal-content">
+            <h2>Recept</h2>
+
+
+
+            <div class="information-customer">
+
+                <div>
+                    <h4> </h4> <span class="name"></span>
+                </div>
+
+                <div>
+                    <h4> </h4><span class="age"></span>
+                </div>
+
+                <div>
+                    <h4> </h4> <span class="date-of-birth"></span>
+                </div>
+
+                <div>
+                    <h4> </h4> <span class="final-date"></span>
+                </div>
+
+                <div>
+                    <h4> </h4> <span class="payment-method"></span>
+                </div>
+
+                <div>
+                    <h4></h4> <span class="room"></span>
+                </div>
+
+                <div>
+                    <h4> </h4> <span class="Price"></span>
+                </div>
+
+            </div>
+            
+            <input type="password" id="passwordInput" style="margin-top: 5px;" placeholder="Enter password">
+            <button id="confirmRemoveBtn">Confirm</button>
+            <button id="cancelRemoveBtn" class="cancelRemoveBtn">Cancel</button>
+        </div>
+    </div>
+    
+        
+
+    <div class="header">
+        <img src="./Images/Home Land Hotel Logo.png" alt="home-land-hotel-logo" class="logo">
+        <h1 class="title">Home Land Hotel</h1>
+    </div>
+
+    <div class="tools">
+
+        <a href="./Form/Form.html"><div class="add-users">
+            <i class="fa-solid fa-user-plus"></i>
+            <h1>ደምበኛ መመዝገብ</h1>
+        </div></a>
+
+        <a href="./Exsiting User/exsiting-users.html"><div class="exsiting-users">
+            <i class="fa-solid fa-user"></i>
+            <h1>ተጠቃሚ</h1>
+        </div></a>
+
+        <a href="./Debtors/Debtors.html"><div class="debtors">
+            <i class="fa-solid fa-money-bill-transfer"></i>
+            <h1>እዳ</h1>
+        </div></a>
+
+        <a href="./Org/org.html"><div class="user-data ">
+            <i class="fa-solid fa-users"></i>
+            <h1>የድርጅት ምዝገባ</h1>
+        </div></a>
+
+    </div>
+    
+    <div class="customer-info">
+        <h1>አጠቃላይ የየቀኑ ሽያጭ በ Cash Register የተቆረጠ</h1>
+
+        <div class="lables">
+
+            <div class="room-lable">
+                <h3 class="lable">Room</h1>
+                <input type="number" placeholder="room" class="name-of-customer name-customer">
+            </div>
+
+            <div class="Restaurant-lable">
+                <h3 class="lable">Restaurant</h1>
+                <input type="number" placeholder="Restaurant" class="name-of-customer name-customer">
+            </div>
+
+            <div class="dube-lable">
+                <h3 class="lable">Dube</h1>
+                <input type="number" placeholder="Dube" class="name-of-customer">
+            </div>
+
+            <div class="prepaid-lable">
+                <h3 class="lable">ቀድሞ የተከፈለ</h1>
+                <input type="number" placeholder="prepaid" class="name-of-customer">
+            </div>
+
+            <div class="void-lable">
+                <h3 class="lable">Void የተደረገ</h1>
+                <input type="number" placeholder="Void የተደረገ" class="name-of-days">
+            </div>
+            
+        </div>
+        
+    </div>
+
+    <div class="submission-btn">
+        <button id="submit-btn">Submit</button>
+    </div>
+
+    <div class="container">
+      <h2><input type="text" id="dailyTitle" placeholder="Enter Title e.g. XYZ" /></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Name</th>
+            <th>Room ዝርዝር</th>
+            <th>Room ብዛት</th>
+            <th>U/P</th>
+            <th>T/P</th>
+            <th>Food</th>
+            <th>Amount</th>
+            <th>Drink</th>
+            <th>Amount</th>
+            <th>Hot Drink</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <!-- Editable input rows -->
+        </tbody>
+      </table>
+  
+      <div class="buttons">
+        <button class="add-btn" id="addRowBtn">＋</button>
+        <button class="save-btn" id="saveBtn">Save</button>
+      </div>
+    </div>
+
+    <div class="container" id="existing-orders">
+        <!-- Existing order groups (ASTU etc) will be inserted here -->
+      </div>
+    
+
+    
+      <!-- Receipt Popup -->
+      <div class="modal" id="receiptModal">
+        <div class="modal-content">
+          <span class="close" id="closeModal">&times;</span>
+          <h3>Receipt Summary</h3>
+          <div id="receiptContent"></div>
+        </div>
+      </div>
+    
+
+    <script type="module" src="Rahel/sales.js"></script>
+</body>
+</html>
