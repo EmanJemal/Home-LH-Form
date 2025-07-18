@@ -724,52 +724,65 @@ showBTNtaju.addEventListener('click', () => {
       dataForExcel.push({ Name: 'Total Telebirr', Room: total.Telebirr + ' Birr' });
       dataForExcel.push({ Name: 'Total CBE', Room: total.CBE + ' Birr' });
       dataForExcel.push({ Name: 'Total Dube', Room: total.Dube + ' Birr' });
-    
+      dataForExcel.push({ Name: '', Room: '' });
+
       // Add "Previous Sales" and "Next Sales" rows WITHOUT styling later
-      dataForExcel.push({ Name: 'Previous Sales', Room: '_______' });
-      dataForExcel.push({ Name: 'Next Sales', Room: '_______' });
-    
+      dataForExcel.push({});
+      dataForExcel.push({}); // spacing row
+      dataForExcel.push({ Name: 'Sales Name: ____________', Room: '-----------------------------' });
+      dataForExcel.push({}); // spacing row
+      dataForExcel.push({ Name: 'sign Taju', Room: '-----------------------------' });
+      
+
       const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
     
       // Optional: Adjust column widths
       worksheet['!cols'] = [
-        { wch: 20 }, // Name
+        { wch: 30 }, // Name
         { wch: 20 }, // Room
         { wch: 15 }, // Amount
         { wch: 15 }, // Method
-        { wch: 25 }, // Timestamp
+        { wch: 35 }, // Timestamp
         { wch: 20 }, // Salesname (if used)
       ];
     
       const range = XLSX.utils.decode_range(worksheet['!ref']);
     
       // Identify rows we want to SKIP styling (last 2)
-      const skipStylingRows = [dataForExcel.length - 2, dataForExcel.length - 1];
+      const skipBorderRows = [dataForExcel.length - 2, dataForExcel.length - 1];
     
       for (let R = range.s.r; R <= range.e.r; ++R) {
         for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-          const cell = worksheet[cellRef];
+          const cell_address = { c: C, r: R };
+          const cell_ref = XLSX.utils.encode_cell(cell_address);
+          const cell = worksheet[cell_ref];
           if (!cell) continue;
-    
-          if (skipStylingRows.includes(R)) {
-            // Skip border for "Previous Sales" & "Next Sales"
-            cell.s = { font: { bold: true, sz: 15 } };
+      
+          // ✨ Style for signature lines: NO borders
+          if (skipBorderRows.includes(R)) {
+            cell.s = {
+              font: { sz: 14 },
+              alignment: { vertical: 'center', horizontal: 'left' },
+              border: {} // No borders at all
+            };
             continue;
           }
-    
-          const baseStyle = {
-            font: { sz: R === 0 ? 18 : 15, bold: R === 0 },
+      
+          // ✅ Normal cell styling
+          cell.s = {
+            font: { sz: 14 },
+            alignment: { vertical: 'center', horizontal: 'left' },
             border: {
               top: { style: "thin", color: { rgb: "000000" } },
               bottom: { style: "thin", color: { rgb: "000000" } },
               left: { style: "thin", color: { rgb: "000000" } },
-              right: { style: "thin", color: { rgb: "000000" } },
-            },
+              right: { style: "thin", color: { rgb: "000000" } }
+            }
           };
-          cell.s = baseStyle;
         }
       }
+      
+      
     
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Timer Report');

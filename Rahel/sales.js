@@ -236,7 +236,7 @@ async function loadExistingOrders() {
     wrapper.className = 'container';
     wrapper.innerHTML = `
       <h2>${title}
-        <button id="export-${title}" style="margin-left: 20px;" class="export">Export to Excel</button>    
+        <button id="export-${title}" style="margin-left: 20px; margin-top: 8px;" class="export">Export to Excel</button>    
       </h2>
       <table>
         <thead>
