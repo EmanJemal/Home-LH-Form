@@ -60,6 +60,7 @@ const allowedUsers = [
   parseInt(process.env.SALES_1_CHAT_ID),
   parseInt(process.env.SALES_2_CHAT_ID),
   parseInt(process.env.SALES_3_CHAT_ID),
+  parseInt(process.env.RAHEL_CHAT_ID),
   parseInt(process.env.Main_ADMIN_CHAT_ID),
 ];
 
