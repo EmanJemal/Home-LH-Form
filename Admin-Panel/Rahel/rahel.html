@@ -386,7 +386,20 @@ input{
         <button class="save-btn" id="saveBtn">Save</button>
       </div>
     </div>
-
+<!-- Admin Panel Section -->
+<div class="admin-panel" style="padding: 20px; margin: 40px 20px; border: 2px solid #67a8df; border-radius: 10px;">
+    <h2 style="color: #fc6b13;">Admin Panel - Filter & Export</h2>
+  
+    <label><strong>Filter by Date:</strong></label>
+    <label>From: <input type="date" id="startDate"></label>
+    <label>To: <input type="date" id="endDate"></label>
+    <button onclick="fetchRangeData()" style="margin-left: 10px; background: #3498db; color: white; padding: 6px 12px; border: none; border-radius: 5px;">Load</button>
+    <button onclick="exportToExcel()" style="margin-left: 10px; background: #2ecc71; color: white; padding: 6px 12px; border: none; border-radius: 5px;">Export Excel</button>
+  
+    <div id="adminDataOutput" style="margin-top: 30px;"></div>
+  </div>
+  
+  
     <div class="container" id="existing-orders">
         <!-- Existing order groups (ASTU etc) will be inserted here -->
       </div>
@@ -404,6 +417,141 @@ input{
     
       <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
       <script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+      <script type="module" src="https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs"></script>
+
     <script type="module" src="../../Rahel/sales.js"></script>
+    <script type="module">
+        import { ref, get, database } from '../../Script/firebase.js';
+        import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs";
+        
+        window.fetchRangeData = async function () {
+  const start = document.getElementById('startDate').value;
+  const end = document.getElementById('endDate').value;
+  if (!start || !end) return alert('Please select both start and end dates.');
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const allDates = [];
+
+  while (startDate <= endDate) {
+    allDates.push(startDate.toISOString().split('T')[0]); // format: YYYY-MM-DD
+    startDate.setDate(startDate.getDate() + 1);
+  }
+
+  const adminOut = document.getElementById('adminDataOutput');
+  adminOut.innerHTML = ''; // clear previous
+
+  let totalRoom = 0, totalRestaurant = 0, totalDube = 0, totalVoid = 0;
+  let allEntries = [];
+
+  for (const dateStr of allDates) {
+    const cashSnap = await get(ref(database, `cashregister/${dateStr}`));
+    const cashData = cashSnap.exists() ? Object.values(cashSnap.val()) : [];
+
+    if (cashData.length === 0) continue;
+
+    allEntries.push(...cashData.map(entry => ({
+      ...entry,
+      date: dateStr
+    })));
+
+    cashData.forEach(entry => {
+      totalRoom += entry.room || 0;
+      totalRestaurant += entry.restaurant || 0;
+      totalDube += entry.dube || 0;
+      totalVoid += entry.void || 0;
+    });
+  }
+
+  if (allEntries.length === 0) {
+    adminOut.innerHTML = `<p style="color:red;">No data found in selected range.</p>`;
+    return;
+  }
+
+  const summary = document.createElement('div');
+  summary.innerHTML = `
+    <p><strong>Total Room:</strong> ${totalRoom}</p>
+    <p><strong>Total Restaurant:</strong> ${totalRestaurant}</p>
+    <p><strong>Total Dube:</strong> ${totalDube}</p>
+    <p><strong>Total Void:</strong> ${totalVoid}</p>
+  `;
+
+  const table = document.createElement('table');
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Room</th>
+        <th>Restaurant</th>
+        <th>Dube</th>
+        <th>Prepaid</th>
+        <th>Void</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${allEntries.map(entry => `
+        <tr>
+          <td>${entry.date}</td>
+          <td>${entry.room}</td>
+          <td>${entry.restaurant}</td>
+          <td>${entry.dube}</td>
+          <td>${entry.prepaid}</td>
+          <td>${entry.void}</td>
+          <td>${entry.timestamp}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  `;
+
+  adminOut.appendChild(summary);
+  adminOut.appendChild(table);
+};
+
+window.exportToExcel = async function () {
+  const start = document.getElementById('startDate').value;
+  const end = document.getElementById('endDate').value;
+  if (!start || !end) return alert("Please select both start and end dates.");
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const allDates = [];
+
+  while (startDate <= endDate) {
+    allDates.push(startDate.toISOString().split("T")[0]);
+    startDate.setDate(startDate.getDate() + 1);
+  }
+
+  const sheetData = [
+    ["Date", "Room", "Restaurant", "Dube", "Prepaid", "Void", "Time"]
+  ];
+
+  for (const dateStr of allDates) {
+    const cashSnap = await get(ref(database, `cashregister/${dateStr}`));
+    const cashData = cashSnap.exists() ? Object.values(cashSnap.val()) : [];
+
+    cashData.forEach(entry => {
+      sheetData.push([
+        dateStr,
+        entry.room || 0,
+        entry.restaurant || 0,
+        entry.dube || 0,
+        entry.prepaid || 'None',
+        entry.void || 0,
+        entry.timestamp || ''
+      ]);
+    });
+  }
+
+  if (sheetData.length === 1) return alert("No data to export.");
+
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+  XLSX.utils.book_append_sheet(workbook, worksheet, "CashRegister");
+  XLSX.writeFile(workbook, `CashRegister_${allDates[0]}_to_${allDates.at(-1)}.xlsx`);
+};
+</script>
+        
+        
 </body>
 </html>
