@@ -44,11 +44,15 @@ const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 const salesChats = [
   { id: process.env.SALES_1_CHAT_ID, code: '' },
   { id: process.env.SALES_2_CHAT_ID, code: '' },
-  { id: process.env.SALES_3_CHAT_ID, code: '' }
+  { id: process.env.SALES_3_CHAT_ID, code: '' },
+  { id: process.env.RAHEL_CHAT_ID, code: '' },
 ];
 const sifan = [
  { id: process.env.SALES_3_CHAT_ID, code: '' }
 ];
+const rahel = [
+  { id: process.env.RAHEL_CHAT_ID, code: '' }
+ ];
 const amana = [
   { id: process.env.SALES_2_CHAT_ID, code: '' }
 ];
