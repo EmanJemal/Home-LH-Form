@@ -380,7 +380,8 @@ async function loadExistingOrders() {
             "", totalHotAmount.toFixed(2)
           ];
 
-          // Final rows to export
+          const today = new Date().toLocaleDateString('en-GB'); // Format dd/mm/yyyy
+
           const allData = [
             [`${title} By Home Land Hotel`], // Header title
             header,                          // Column headers
@@ -391,9 +392,13 @@ async function loadExistingOrders() {
             ...metaPayments,                 // Meta payment rows
             ["በአጠቃላይ መከፈል ያለበት", totalPayment.toFixed(2)],
             ["እስካሁን በአጠቃላይ የተከፈለ", totalMeta.toFixed(2)],
-            ["ቀሪ", leftToPay]
+            ["ቀሪ", leftToPay],
+            [],                              // Spacer
+            [`ቀን (Date): ${today}`],
+            [],                              // Spacer
+            [`Rahel: __________________`, `${title}: __________________`]
           ];
-
+          
     
           const worksheet = XLSX.utils.aoa_to_sheet(allData);
     
@@ -425,11 +430,19 @@ async function loadExistingOrders() {
           };
     
           const range = XLSX.utils.decode_range(worksheet['!ref']);
+          const dateRowIndex = allData.length - 3;
+          const signatureRowIndex = allData.length - 1;
+
           for (let R = range.s.r; R <= range.e.r; ++R) {
             for (let C = range.s.c; C <= range.e.c; ++C) {
               const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
               if (!worksheet[cellAddr]) continue;
-    
+          
+              // Skip styling for date and signature rows
+              if (R === dateRowIndex || R === signatureRowIndex) {
+                continue;
+              }
+          
               if (R === 0) {
                 worksheet[cellAddr].s = titleStyle;
               } else if (R === 1) {
@@ -441,6 +454,7 @@ async function loadExistingOrders() {
               }
             }
           }
+          
     
           const workbook = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(workbook, worksheet, title);

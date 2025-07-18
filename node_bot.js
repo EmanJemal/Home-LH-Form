@@ -173,7 +173,11 @@ const screenshotSessions = {}; // Holds state for /screenshot flows
 bot.onText(/\/screenshot/, async (msg) => {
   const chatId = msg.chat.id;
 
-
+  // ✅ Check if user is allowed
+  if (!allowedUsers.includes(chatId)) {
+    console.log(`❌ Unauthorized user attempted to /screenshot: ${chatId}`);
+    return;
+  }
 
   // 🔄 Generate a unique 4-digit ID
   let id;
