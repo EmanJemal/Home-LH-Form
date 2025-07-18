@@ -453,6 +453,7 @@ showBTN.addEventListener('click', () => {
                   "jan", "feb", "mar", "apr", "may", "jun",
                   "jul", "aug", "sep", "oct", "nov", "dec"
                 ];
+                
                 const fileName = `report_${months[today.getMonth()]}_${today.getDate()}_${today.getFullYear()}.xlsx`;
                 
                 XLSX.writeFile(workbook, fileName);
@@ -528,15 +529,257 @@ showBTNTimer.addEventListener('click', () => {
       dataForExcel.push({ Name: 'Total Telebirr', Room: total.Telebirr + ' Birr' });
       dataForExcel.push({ Name: 'Total CBE', Room: total.CBE + ' Birr' });
       dataForExcel.push({ Name: 'Total Dube', Room: total.Dube + ' Birr' });
-
+    
+      // Add "Previous Sales" and "Next Sales" rows WITHOUT styling later
+      dataForExcel.push({ Name: 'Previous Sales', Room: '_______' });
+      dataForExcel.push({ Name: 'Next Sales', Room: '_______' });
+    
       const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+    
+      // Optional: Adjust column widths
+      worksheet['!cols'] = [
+        { wch: 20 }, // Name
+        { wch: 20 }, // Room
+        { wch: 15 }, // Amount
+        { wch: 15 }, // Method
+        { wch: 25 }, // Timestamp
+        { wch: 20 }, // Salesname (if used)
+      ];
+    
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+    
+      // Identify rows we want to SKIP styling (last 2)
+      const skipStylingRows = [dataForExcel.length - 2, dataForExcel.length - 1];
+    
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = worksheet[cellRef];
+          if (!cell) continue;
+    
+          if (skipStylingRows.includes(R)) {
+            // Skip border for "Previous Sales" & "Next Sales"
+            cell.s = { font: { bold: true, sz: 15 } };
+            continue;
+          }
+    
+          const baseStyle = {
+            font: { sz: R === 0 ? 18 : 15, bold: R === 0 },
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } },
+            },
+          };
+          cell.s = baseStyle;
+        }
+      }
+    
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Timer Report');
-
+    
       const today = new Date();
       const fileName = `timer_${timerId}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.xlsx`;
       XLSX.writeFile(workbook, fileName);
     });
+    
+    
+
+    document.getElementById("downloadWord").addEventListener("click", async () => {
+      const {
+        Document, Packer, Paragraph, Table, TableRow, TableCell,
+        WidthType, TextRun, AlignmentType
+      } = window.docx;
+
+      const today = new Date();
+      const doc = new Document({
+        sections: [
+          {
+            properties: {},
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: `Home Land Hotel Daily Report`, bold: true, size: 36 }),
+                  new TextRun({ text: `\n${today.toDateString()}`, break: 1, size: 28 })
+                ]
+              }),
+              new Paragraph({
+                spacing: { after: 200 },
+                children: [
+                  new TextRun(`Salesperson: ${allData[0]?.salesname || "N/A"}`),
+                  new TextRun({ text: `\nTimer ID: ${timerId}`, break: 1 }),
+                  new TextRun({ text: `\nGenerated at: ${today.toLocaleTimeString()}`, break: 1 })
+                ]
+              }),
+              new Table({
+                rows: [
+                  new TableRow({
+                    children: ["Name", "Room", "Amount", "Method", "Timestamp"].map(header =>
+                      new TableCell({
+                        width: { size: 20, type: WidthType.PERCENTAGE },
+                        children: [new Paragraph({ children: [new TextRun({ text: header, bold: true })] })]
+                      })
+                    )
+                  }),
+                  ...allData.map(entry => new TableRow({
+                    children: ["Name", "Room", "Amount", "Method", "Timestamp"].map(field =>
+                      new TableCell({
+                        children: [new Paragraph(entry[field] || "N/A")]
+                      })
+                    )
+                  }))
+                ]
+              }),
+              new Paragraph({
+                spacing: { before: 300 },
+                children: [
+                  new TextRun({ text: `Total Cash: ${total.Cash} Birr`, break: 1 }),
+                  new TextRun({ text: `Total Telebirr: ${total.Telebirr} Birr`, break: 1 }),
+                  new TextRun({ text: `Total CBE: ${total.CBE} Birr`, break: 1 }),
+                  new TextRun({ text: `Total Dube: ${total.Dube} Birr`, break: 1 })
+                ]
+              })
+            ]
+          }
+        ]
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const blobURL = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobURL;
+      a.download = `timer_${timerId}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.docx`;
+      a.click();
+      URL.revokeObjectURL(blobURL);
+    });
+  };
+});
+
+
+const showBTNtaju = document.querySelector(".show-btn-taju");
+
+showBTNtaju.addEventListener('click', () => {
+  const modal = document.getElementById('removeCustomerModal');
+  modal.style.display = 'block';
+
+  document.getElementById('confirmRemoveBtn').onclick = async () => {
+    const password = document.getElementById('passwordInput').value;
+    const timerInput = prompt("Enter one or more Timer IDs, separated by commas:");
+
+    if (!timerInput) return alert("At least one Timer ID is required.");
+    const timerIds = timerInput.split(",").map(id => id.trim()).filter(Boolean);
+    if (timerIds.length === 0) return alert("No valid Timer IDs provided.");
+    
+    if (password !== '018769') {
+      alert('Incorrect password.');
+      return;
+    }
+
+    modal.style.display = 'none';
+    const paymentsSnap = await get(child(ref(database), 'Payments'));
+
+    let total = { Cash: 0, Telebirr: 0, CBE: 0, Dube: 0 };
+    const allData = [];
+
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach((snap) => {
+        const val = snap.val();
+        const amount = parseFloat(val.amountInBirr);
+        const method = val.paymentMethod?.toLowerCase();
+
+        if (timerIds.includes(val.timeid) && !isNaN(amount)) {
+          if (method.includes("cash")) total.Cash += amount;
+          else if (method.includes("telebirr")) total.Telebirr += amount;
+          else if (method.includes("cbe")) total.CBE += amount;
+          else if (method.includes("debtors") || method.includes("dube")) total.Dube += amount;
+
+          allData.push({
+            Name: val.name || "N/A",
+            Room: val.selectedRoom || "N/A",
+            Amount: amount + ' Birr',
+            Method: val.paymentMethod || "N/A",
+            Timestamp: val.timestamp || "N/A",
+            salesname: val.salesname || "N/A",
+          });
+        }
+      });
+    }
+
+    const containerDiv = document.querySelector('.daily-amount');
+    containerDiv.innerHTML = `
+      <div class="cash"><h1>Cash</h1><h2>${total.Cash} Birr</h2></div>
+      <div class="cash"><h1>Telebirr</h1><h2>${total.Telebirr} Birr</h2></div>
+      <div class="cash"><h1>CBE</h1><h2>${total.CBE} Birr</h2></div>
+      <div class="cash"><h1>Dube</h1><h2>${total.Dube} Birr</h2></div>
+      <button id="downloadExcel">📥 Download Excel</button>
+      <button id="downloadWord">📄 Download Word</button>
+    `;
+
+    document.getElementById("downloadExcel").addEventListener("click", () => {
+      const dataForExcel = [...allData];
+      dataForExcel.push({});
+      dataForExcel.push({ Name: 'Total Cash', Room: total.Cash + ' Birr' });
+      dataForExcel.push({ Name: 'Total Telebirr', Room: total.Telebirr + ' Birr' });
+      dataForExcel.push({ Name: 'Total CBE', Room: total.CBE + ' Birr' });
+      dataForExcel.push({ Name: 'Total Dube', Room: total.Dube + ' Birr' });
+    
+      // Add "Previous Sales" and "Next Sales" rows WITHOUT styling later
+      dataForExcel.push({ Name: 'Previous Sales', Room: '_______' });
+      dataForExcel.push({ Name: 'Next Sales', Room: '_______' });
+    
+      const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+    
+      // Optional: Adjust column widths
+      worksheet['!cols'] = [
+        { wch: 20 }, // Name
+        { wch: 20 }, // Room
+        { wch: 15 }, // Amount
+        { wch: 15 }, // Method
+        { wch: 25 }, // Timestamp
+        { wch: 20 }, // Salesname (if used)
+      ];
+    
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+    
+      // Identify rows we want to SKIP styling (last 2)
+      const skipStylingRows = [dataForExcel.length - 2, dataForExcel.length - 1];
+    
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = worksheet[cellRef];
+          if (!cell) continue;
+    
+          if (skipStylingRows.includes(R)) {
+            // Skip border for "Previous Sales" & "Next Sales"
+            cell.s = { font: { bold: true, sz: 15 } };
+            continue;
+          }
+    
+          const baseStyle = {
+            font: { sz: R === 0 ? 18 : 15, bold: R === 0 },
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } },
+            },
+          };
+          cell.s = baseStyle;
+        }
+      }
+    
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Timer Report');
+    
+      const today = new Date();
+      const fileName = `Taju_Report_${timerIds.join('-')}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    });
+    
+    
 
     document.getElementById("downloadWord").addEventListener("click", async () => {
       const {
@@ -611,9 +854,6 @@ showBTNTimer.addEventListener('click', () => {
 
 
 
-
-
-
 // Function to remove the customer and their booked room
 function removeCustomerORG(orgKey, roomNumber, bookingName) {
   const orgRef = ref(database, `organisation_room/${bookingName}`); // ✅ safe path
@@ -648,55 +888,98 @@ function removeCustomerORG(orgKey, roomNumber, bookingName) {
 }
 
 
-
 document.getElementById('exportExcelBtn').addEventListener('click', async () => {
-    const customerSnapshot = await get(child(ref(database), 'customers'));
-    const orgSnapshot = await get(child(ref(database), 'organisation_room'));
+  const customerSnapshot = await get(child(ref(database), 'customers'));
+  const orgSnapshot = await get(child(ref(database), 'organisation_room'));
 
-    const allData = [];
+  const allData = [];
 
-    if (customerSnapshot.exists()) {
-      customerSnapshot.forEach((childSnap) => {
-        const c = childSnap.val();
-        allData.push({
-          Name: c.name,
-          Room: c.selectedRoom,
-          Days: c.days,
-          Payment: c.paymentMethod,
-          Start: c.timestamp,
-          End: c.finalDate,
-        });
+  if (customerSnapshot.exists()) {
+    customerSnapshot.forEach((childSnap) => {
+      const c = childSnap.val();
+      allData.push({
+        Name: c.name,
+        Room: c.selectedRoom,
+        Days: c.days,
+        Payment: c.paymentMethod,
+        Start: c.timestamp,
+        End: c.finalDate,
       });
-    }
+    });
+  }
 
-    if (orgSnapshot.exists()) {
-      orgSnapshot.forEach((childSnapshot) => {
-        const orgKey = childSnapshot.key; // ✅ like "m_k"
-            const customer = childSnapshot.val();
-      
-        for (let index = 0; index < customer.bookings.length; index++) {
-          const booking = customer.bookings[index];
-      
-          // ...
-          listItem.querySelector('.org-leaved').addEventListener('click', () => {
-            showRemovePopupORG(orgKey, element.room, element.name);
+  if (orgSnapshot.exists()) {
+    orgSnapshot.forEach((childSnapshot) => {
+      const orgKey = childSnapshot.key;
+      const customer = childSnapshot.val();
+
+      if (customer.bookings && Array.isArray(customer.bookings)) {
+        customer.bookings.forEach((booking) => {
+          allData.push({
+            Name: booking.name,
+            Room: booking.room,
+            Days: booking.days,
+            Payment: booking.paymentMethod || '',
+            Start: booking.startDate || '',
+            End: booking.endDate || ''
           });
-        
-        }
-      });
-      
+        });
+      }
+    });
+  }
+
+  if (allData.length === 0) {
+    alert("No customer data found to export.");
+    return;
+  }
+
+  // Header row manually defined
+  const header = ["Name", "Room", "Days", "Payment", "Start", "End"];
+  const rows = allData.map(obj => [obj.Name, obj.Room, obj.Days, obj.Payment, obj.Start, obj.End]);
+
+  const finalData = [header, ...rows];
+
+  const worksheet = XLSX.utils.aoa_to_sheet(finalData);
+  worksheet['!cols'] = [
+    { wch: 20 }, // Name
+    { wch: 10 }, // Room
+    { wch: 8 },  // Days
+    { wch: 12 }, // Payment
+    { wch: 18 }, // Start
+    { wch: 18 }  // End
+  ];
+  
+  // Apply styles
+  const borderStyle = {
+    top: { style: "thin" },
+    bottom: { style: "thin" },
+    left: { style: "thin" },
+    right: { style: "thin" }
+  };
+
+  const headerStyle = {
+    font: { bold: true, sz: 18 },
+    border: borderStyle
+  };
+
+  const bodyStyle = {
+    font: { sz: 15 },
+    border: borderStyle
+  };
+
+  const range = XLSX.utils.decode_range(worksheet['!ref']);
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!worksheet[cellAddress]) continue;
+
+      worksheet[cellAddress].s = R === 0 ? headerStyle : bodyStyle;
     }
+  }
 
-    if (allData.length === 0) {
-      alert("No customer data found to export.");
-      return;
-    }
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
 
-    // Convert data to worksheet and workbook
-    const worksheet = XLSX.utils.json_to_sheet(allData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+  XLSX.writeFile(workbook, 'All_Customers.xlsx');
 
-    // Trigger download
-    XLSX.writeFile(workbook, 'All_Customers.xlsx');
-  });
+});
