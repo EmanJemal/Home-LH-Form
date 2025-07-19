@@ -7,6 +7,7 @@ import XLSX from 'xlsx';
 import fs from 'fs';
 import { DateTime } from 'luxon';
 import admin from 'firebase-admin';
+import fetch from 'node-fetch';
 
 
 const app = express();
