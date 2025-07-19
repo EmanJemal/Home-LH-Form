@@ -95,7 +95,7 @@ addRowBtn.addEventListener('click', () => {
     <td><input type="number" placeholder="Amount" /></td>
     <td><input type="text" placeholder="Drink" /></td>
     <td><input type="number" placeholder="Amount" /></td>
-    <td><input type="text" placeholder="Hot Drink" /></td>
+    <td><input type="text" placeholder="Event Type" /></td>
     <td><input type="number" placeholder="Amount" /></td>
   `;
   tableBody.appendChild(row);
@@ -125,8 +125,8 @@ saveBtn.addEventListener('click', async () => {
         foodAmount: parseInt(inputs[7].value) || 0,
         drink: inputs[8].value,
         drinkAmount: parseInt(inputs[9].value) || 0,
-        hotDrink: inputs[10].value,
-        hotAmount: parseInt(inputs[11].value) || 0,
+        Event_Type: inputs[10].value,
+        Event_amount: parseInt(inputs[11].value) || 0,
       };
 
       entries.push(entry);
@@ -150,9 +150,8 @@ saveBtn.addEventListener('click', async () => {
         T/P: ${entry.t_p || '-'} (${entry.foodAmount || 0})<br>
         Food: ${entry.food || '-'} (${entry.foodAmount || 0})<br>
         Drink: ${entry.drink || '-'} (${entry.drinkAmount || 0})<br>
-        Hot Drink: ${entry.hotDrink || '-'} (${entry.hotAmount || 0})<br>
-        Room: ${entry.room || '-'}
-      </div><hr>`;
+        Event_Type: ${entry.Event_Type || '-'} (${entry.Event_amount || 0})<br>
+\      </div><hr>`;
   });
 
   receiptContent.innerHTML = receiptHTML || 'No entries to show.';
@@ -181,7 +180,7 @@ async function loadExistingOrders() {
     const metaKeys = Object.keys(data[title]).filter(k => k.startsWith('__meta'));
     const metas = metaKeys.map(key => ({ key, ...data[title][key] }));
 
-    let totalUP = 0, totalTP = 0, totalFoodAmount = 0, totalDrinkAmount = 0, totalHotAmount = 0;
+    let totalUP = 0, totalTP = 0, totalFoodAmount = 0, totalDrinkAmount = 0, totalEventAmount = 0;
 
     const rowsHTML = orderList
       .filter(([key]) => !key.startsWith('__meta')) // exclude meta from table rows
@@ -190,7 +189,7 @@ async function loadExistingOrders() {
         totalTP += parseFloat(entry.t_p || 0);
         totalFoodAmount += parseFloat(entry.foodAmount || 0);
         totalDrinkAmount += parseFloat(entry.drinkAmount || 0);
-        totalHotAmount += parseFloat(entry.hotAmount || 0);
+        totalEventAmount += parseFloat(entry.Event_amount || 0);
 
         return `
           <tr>
@@ -204,8 +203,8 @@ async function loadExistingOrders() {
             <td>${entry.foodAmount || 0}</td>
             <td>${entry.drink || ''}</td>
             <td>${entry.drinkAmount || 0}</td>
-            <td>${entry.hotDrink || ''}</td>
-            <td>${entry.hotAmount || 0}</td>
+            <td>${entry.Event_Type || ''}</td>
+            <td>${entry.Event_amount || 0}</td>
           </tr>
         `;
       }).join('');
@@ -214,7 +213,7 @@ async function loadExistingOrders() {
     const totalMetaAmount = metas.reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
 
     // Calculate Left Price
-    const totalPrice = totalTP + totalFoodAmount + totalDrinkAmount + totalHotAmount;
+    const totalPrice = totalTP + totalFoodAmount + totalDrinkAmount + totalEventAmount;
     const leftPrice = totalPrice - totalMetaAmount;
 
     // Prepare meta display HTML
@@ -251,7 +250,7 @@ async function loadExistingOrders() {
             <th>Amount</th>
             <th>Drink</th>
             <th>Amount</th>
-            <th>Hot Drink</th>
+            <th>Event_Type</th>
             <th>Amount</th>
           </tr>
         </thead>
@@ -267,7 +266,7 @@ async function loadExistingOrders() {
             <td></td>
             <td style=" font-size: 20px;font-weight: bold;">${totalDrinkAmount.toFixed(2)}</td>
             <td></td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalHotAmount.toFixed(2)}</td>
+            <td style=" font-size: 20px;font-weight: bold;">${totalEventAmount.toFixed(2)}</td>
           </tr>
         </tbody>
       </table>
@@ -336,7 +335,7 @@ async function loadExistingOrders() {
         exportBtn.addEventListener('click', () => {
           const header = [
             "Date", "Name", "room_ዝርዝር", "room_ብዛት", "U/P", "T/P",
-            "Food", "Amount", "Drink", "Amount", "Hot Drink", "Amount"
+            "Food", "Amount", "Drink", "Amount", "Event Type", "Amount"
           ];
     
           const metaPayments = [];
@@ -355,8 +354,8 @@ async function loadExistingOrders() {
               entry.foodAmount || 0,
               entry.drink || '',
               entry.drinkAmount || 0,
-              entry.hotDrink || '',
-              entry.hotAmount || 0
+              entry.Event_Type || '',
+              entry.Event_amount || 0
             ]);
 
           // Collect meta payments
@@ -369,7 +368,7 @@ async function loadExistingOrders() {
               totalMeta += parseFloat(val.amount || 0);
             });
 
-          const totalPayment = totalTP + totalFoodAmount + totalDrinkAmount + totalHotAmount;
+          const totalPayment = totalTP + totalFoodAmount + totalDrinkAmount + totalEventAmount;
           const leftToPay = (totalPayment - totalMeta).toFixed(2);
 
           const totalRow = [
@@ -377,7 +376,7 @@ async function loadExistingOrders() {
             totalUP.toFixed(2), totalTP.toFixed(2),
             "", totalFoodAmount.toFixed(2),
             "", totalDrinkAmount.toFixed(2),
-            "", totalHotAmount.toFixed(2)
+            "", totalEventAmount.toFixed(2)
           ];
 
           const today = new Date().toLocaleDateString('en-GB'); // Format dd/mm/yyyy
