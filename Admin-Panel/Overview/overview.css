@@ -28,17 +28,25 @@ a{
     width: 100%;
     margin: 30px;
     display: grid;
-    grid-template-columns: 33% 33% 33%;
+    grid-template-columns: 24% 30% 20% 24%;
 }
 .total-rooms-reserved{
-    width: 350px;
+    width: 300px;
     height: 160px;
     background-color: #67a8df;
     border-radius: 50px;
     color: white;
 }
-.total-money-made-month{
+.organisation-rooms {
     width: 350px;
+    height: fit-content;
+    background-color: #fc6b13;
+    border-radius: 50px;
+    color: white;  
+  }
+    
+.total-money-made-month{
+    width: 300px;
     height: fit-content;
     background-color: #67a8df;
     border-radius: 50px;
@@ -50,7 +58,7 @@ a{
 }
 
 .total-money-made-day{
-    width: 350px;
+    width: 250px;
     height: fit-content;
     background-color: #fc6b13;
     border-radius: 50px;
@@ -83,7 +91,25 @@ a{
     border-width: 2px;
     margin: 20px;
     padding: 0 20px 20px 20px;
-    border-radius: 10px;
+    border-radius: 10px;.organisation-rooms {
+        padding: 20px;
+        border: 2px solid #67a8df;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+      
+      .organisation-rooms h2 {
+        color: #fc6b13;
+      }
+      
+      #org-rooms-list li {
+        background-color: #eef5fb;
+        margin: 5px 0;
+        padding: 6px 12px;
+        border-left: 5px solid #2196f3;
+        border-radius: 5px;
+      }
+      
 
     display: grid;
     grid-template-columns: 70% 30%;

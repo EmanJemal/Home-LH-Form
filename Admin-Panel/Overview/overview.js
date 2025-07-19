@@ -9,6 +9,64 @@ const dailyRevenueElement = document.querySelector('.total-money-made-day h2');
 const roomsRef = ref(database, 'rooms');
 const customersRef = ref(database, 'customers');
 const orgRef = ref(database, 'organisation_room');
+const orgTotalBookedElement = document.getElementById('org-total-booked');
+const orgTotalOtherElement = document.getElementById('org-total-other');
+const orgFoodTotalElement = document.getElementById('org-food-total');
+const orgUpTotalElement = document.getElementById('org-up-total');
+
+onValue(orgRef, async (snapshot) => {
+    if (!snapshot.exists()) {
+        orgTotalBookedElement.textContent = '0';
+        orgTotalOtherElement.textContent = '0';
+        orgFoodTotalElement.textContent = '0';
+        orgUpTotalElement.textContent = '0';
+        return;
+    }
+
+    let totalBookedInHotel = 0;
+    let totalBookedInOther = 0;
+    let totalFoodAmount = 0;
+    let totalUpAmount = 0;
+
+    const orgData = snapshot.val();
+    const dailyOrdersRef = ref(database, 'Daily_Orders');
+
+    const dailyOrdersSnap = await get(dailyOrdersRef);
+    const dailyOrdersData = dailyOrdersSnap.exists() ? dailyOrdersSnap.val() : {};
+
+    Object.keys(orgData).forEach((orgName) => {
+        const org = orgData[orgName];
+        const bookedRooms = org.bookedRooms || [];
+        const noRoomReserved = parseInt(org.noRoomReserved) || 0;
+
+        totalBookedInHotel += bookedRooms.length;
+        totalBookedInOther += noRoomReserved;
+
+        // Normalize org name: remove _, spaces, lowercase
+        const normalizedOrgName = orgName.replace(/[_\s]/g, '').toLowerCase();
+
+        Object.keys(dailyOrdersData).forEach((dailyOrgName) => {
+            const normalizedDailyName = dailyOrgName.replace(/[_\s]/g, '').toLowerCase();
+
+            if (normalizedDailyName === normalizedOrgName) {
+                const orders = dailyOrdersData[dailyOrgName];
+
+                Object.values(orders).forEach((order) => {
+                    const food = parseFloat(order.foodAmount) || 0;
+                    const up = parseFloat(order.t_p) || 0;
+                    totalFoodAmount += food;
+                    totalUpAmount += up;
+                });
+            }
+        });
+    });
+
+    // Display results
+    orgTotalBookedElement.textContent = totalBookedInHotel;
+    orgTotalOtherElement.textContent = totalBookedInOther;
+    orgFoodTotalElement.textContent = totalFoodAmount.toLocaleString();
+    orgUpTotalElement.textContent = totalUpAmount.toLocaleString();
+});
 
 // DOM Reference
 const monthlyRevenueElement = document.querySelector('.total-money-made-month h1');
@@ -558,3 +616,5 @@ selectedDate.addEventListener('change', async (event) => {
     }
 
 });
+
+
