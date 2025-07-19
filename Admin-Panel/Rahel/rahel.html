@@ -421,92 +421,92 @@ input{
 
     <script type="module" src="../../Rahel/sales.js"></script>
     <script type="module">
-        import { ref, get, database } from '../../Script/firebase.js';
+        import { ref, get, database, child } from '../../Script/firebase.js';
         import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs";
         
         window.fetchRangeData = async function () {
-  const start = document.getElementById('startDate').value;
-  const end = document.getElementById('endDate').value;
-  if (!start || !end) return alert('Please select both start and end dates.');
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      if (!start || !end) return alert('Please select both start and end dates.');
 
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const allDates = [];
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      const allDates = [];
 
-  while (startDate <= endDate) {
-    allDates.push(startDate.toISOString().split('T')[0]); // format: YYYY-MM-DD
-    startDate.setDate(startDate.getDate() + 1);
-  }
+      while (startDate <= endDate) {
+        allDates.push(startDate.toISOString().split('T')[0]); // format: YYYY-MM-DD
+        startDate.setDate(startDate.getDate() + 1);
+      }
 
-  const adminOut = document.getElementById('adminDataOutput');
-  adminOut.innerHTML = ''; // clear previous
+      const adminOut = document.getElementById('adminDataOutput');
+      adminOut.innerHTML = ''; // clear previous
 
-  let totalRoom = 0, totalRestaurant = 0, totalDube = 0, totalVoid = 0;
-  let allEntries = [];
+      let totalRoom = 0, totalRestaurant = 0, totalDube = 0, totalVoid = 0;
+      let allEntries = [];
 
-  for (const dateStr of allDates) {
-    const cashSnap = await get(ref(database, `cashregister/${dateStr}`));
-    const cashData = cashSnap.exists() ? Object.values(cashSnap.val()) : [];
+      for (const dateStr of allDates) {
+        const cashSnap = await get(ref(database, `cashregister/${dateStr}`));
+        const cashData = cashSnap.exists() ? Object.values(cashSnap.val()) : [];
 
-    if (cashData.length === 0) continue;
+        if (cashData.length === 0) continue;
 
-    allEntries.push(...cashData.map(entry => ({
-      ...entry,
-      date: dateStr
-    })));
+        allEntries.push(...cashData.map(entry => ({
+          ...entry,
+          date: dateStr
+        })));
 
-    cashData.forEach(entry => {
-      totalRoom += entry.room || 0;
-      totalRestaurant += entry.restaurant || 0;
-      totalDube += entry.dube || 0;
-      totalVoid += entry.void || 0;
-    });
-  }
+        cashData.forEach(entry => {
+          totalRoom += entry.room || 0;
+          totalRestaurant += entry.restaurant || 0;
+          totalDube += entry.dube || 0;
+          totalVoid += entry.void || 0;
+        });
+      }
 
-  if (allEntries.length === 0) {
-    adminOut.innerHTML = `<p style="color:red;">No data found in selected range.</p>`;
-    return;
-  }
+      if (allEntries.length === 0) {
+        adminOut.innerHTML = `<p style="color:red;">No data found in selected range.</p>`;
+        return;
+      }
 
-  const summary = document.createElement('div');
-  summary.innerHTML = `
-    <p><strong>Total Room:</strong> ${totalRoom}</p>
-    <p><strong>Total Restaurant:</strong> ${totalRestaurant}</p>
-    <p><strong>Total Dube:</strong> ${totalDube}</p>
-    <p><strong>Total Void:</strong> ${totalVoid}</p>
-  `;
+      const summary = document.createElement('div');
+      summary.innerHTML = `
+        <p><strong>Total Room:</strong> ${totalRoom}</p>
+        <p><strong>Total Restaurant:</strong> ${totalRestaurant}</p>
+        <p><strong>Total Dube:</strong> ${totalDube}</p>
+        <p><strong>Total Void:</strong> ${totalVoid}</p>
+      `;
 
-  const table = document.createElement('table');
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Room</th>
-        <th>Restaurant</th>
-        <th>Dube</th>
-        <th>Prepaid</th>
-        <th>Void</th>
-        <th>Time</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${allEntries.map(entry => `
-        <tr>
-          <td>${entry.date}</td>
-          <td>${entry.room}</td>
-          <td>${entry.restaurant}</td>
-          <td>${entry.dube}</td>
-          <td>${entry.prepaid}</td>
-          <td>${entry.void}</td>
-          <td>${entry.timestamp}</td>
-        </tr>
-      `).join('')}
-    </tbody>
-  `;
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Room</th>
+            <th>Restaurant</th>
+            <th>Dube</th>
+            <th>Prepaid</th>
+            <th>Void</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allEntries.map(entry => `
+            <tr>
+              <td>${entry.date}</td>
+              <td>${entry.room}</td>
+              <td>${entry.restaurant}</td>
+              <td>${entry.dube}</td>
+              <td>${entry.prepaid}</td>
+              <td>${entry.void}</td>
+              <td>${entry.timestamp}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
 
-  adminOut.appendChild(summary);
-  adminOut.appendChild(table);
-};
+      adminOut.appendChild(summary);
+      adminOut.appendChild(table);
+    };
 
 window.exportToExcel = async function () {
   const start = document.getElementById('startDate').value;
@@ -550,6 +550,49 @@ window.exportToExcel = async function () {
   XLSX.utils.book_append_sheet(workbook, worksheet, "CashRegister");
   XLSX.writeFile(workbook, `CashRegister_${allDates[0]}_to_${allDates.at(-1)}.xlsx`);
 };
+
+
+
+async function displayMetaScreenshots(metaPath, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const metaSnap = await get(ref(database, metaPath));
+  if (!metaSnap.exists()) {
+    container.innerHTML += `<p>No meta data found at ${metaPath}</p>`;
+    return;
+  }
+
+  const metaData = metaSnap.val();
+  const screenshotIds = metaData?.screenshotIds || {};
+
+  Object.values(screenshotIds).forEach(async (id) => {
+    const screenshotRef = ref(database, `Screenshot_id/${id}`);
+    const ssSnap = await get(screenshotRef);
+
+    const div = document.createElement('div');
+    div.style.marginTop = '20px';
+
+    if (ssSnap.exists()) {
+      const fileId = Object.values(ssSnap.val())[0];
+      const img = document.createElement('img');
+      img.src = `https://home-lh-form-production.up.railway.app/telegram-image/${fileId}`;
+      img.alt = "Screenshot";
+      img.style.maxWidth = '300px';
+      img.style.border = '1px solid #ccc';
+      div.appendChild(img);
+    } else {
+      div.innerHTML = `<p>Screenshot not available for ID: ${id}</p>`;
+    }
+
+    container.appendChild(div);
+  });
+}
+
+// Usage Example
+await displayMetaScreenshots('__meta__', 'adminDataOutput');
+await displayMetaScreenshots('__meta2__', 'adminDataOutput');
+
 </script>
         
         

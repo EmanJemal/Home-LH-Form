@@ -211,20 +211,19 @@ bot.onText(/\/screenshot/, async (msg) => {
 // ─── Telegram Image Proxy Endpoint ─────────────────────────────
 app.get('/telegram-image/:fileId', async (req, res) => {
   const fileId = req.params.fileId;
-
   try {
     const file = await bot.getFile(fileId);
-    if (!file || !file.file_path) {
-      console.error("⚠️ No file path received from Telegram");
-      return res.status(404).send('Image not found (no file_path)');
-    }
+    const url = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
 
-    const fileUrl = `https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`;
-    return res.redirect(fileUrl);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch from Telegram');
 
-  } catch (err) {
-    console.error("❌ Failed to get Telegram file:", err);
-    return res.status(404).send('Image not found');
+    const buffer = await response.buffer();
+    res.set('Content-Type', 'image/jpeg');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Image proxy error:', error);
+    res.status(500).send('Image not found');
   }
 });
 
