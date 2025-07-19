@@ -162,6 +162,34 @@ closeModal.addEventListener('click', () => {
   receiptModal.style.display = 'none';
   window.location.reload();
 });
+
+
+document.getElementById('submit-btn').addEventListener('click', async () => {
+
+  const entry = {
+    date: document.getElementById('event-date').value,
+    Name: document.getElementById('event-name').value,
+    people_ብዛት: document.getElementById('event-people').value,
+    u_p: document.getElementById('event-up').value,
+    t_p: document.getElementById('event-tp').value,
+    food: document.getElementById('event-food').value,
+    foodAmount: parseInt(document.getElementById('event-foodamt').value) || 0,
+    drinkAmount: 0,
+    Event_Type: document.getElementById('event-name').value,
+    Event_amount: parseInt(document.getElementById('event-tp').value) || 0,
+  };
+
+  try {
+    const entryRef = push(ref(database, `Daily_Orders/Event`));
+    await set(entryRef, entry);
+    alert("Event submitted successfully!");
+    window.location.reload();
+  } catch (error) {
+    console.error("Error submitting event:", error);
+    alert("Failed to submit event.");
+  }
+});
+
 async function loadExistingOrders() {
   const snapshot = await get(ref(database, 'Daily_Orders'));
   const data = snapshot.val();

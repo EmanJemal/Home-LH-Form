@@ -26,7 +26,7 @@ body {
   padding-right: 10px;
   margin-bottom: 20px;
 }
-.customer-info{
+.customer-info-rahel{
   display: none;
 }
 .container {
@@ -166,7 +166,7 @@ input{
     font-size: 15px;
     margin-top: 13px;
 }
-.submission-btn{
+.submission-btn-rahel{
   display: none;
 }
 .export{
@@ -321,7 +321,7 @@ input{
       </div></a>
     </div>
     
-    <div class="customer-info">
+    <div class="customer-info-rahel">
         <h1>አጠቃላይ የየቀኑ ሽያጭ በ Cash Register የተቆረጠ</h1>
 
         <div class="lables">
@@ -355,9 +355,7 @@ input{
         
     </div>
 
-    <div class="submission-btn">
-        <button id="submit-btn">Submit</button>
-    </div>
+    
 
     <div class="container">
       <h2><input type="text" id="dailyTitle" placeholder="Enter Title e.g. XYZ" /></h2>
@@ -395,6 +393,50 @@ input{
     
 
     
+      <div class="customer-info">
+        <h1>For Events only</h1>
+        <div class="lables">
+          <div class="Date-lable">
+            <h3 class="lable">Date</h3>
+            <input type="date" id="event-date" placeholder="Date">
+          </div>
+      
+          <div class="Name-lable">
+            <h3 class="lable">Event Type</h3>
+            <input type="text" id="event-name" placeholder="Name">
+          </div>
+              <div class="up-lable">
+            <h3 class="lable">U_P</h3>
+            <input type="number" id="event-up" placeholder="U_P">
+          </div>
+          <div class="number-peoples-lable">
+            <h3 class="lable">Number of peoples</h3>
+            <input type="number" id="event-people" placeholder="Number-people">
+          </div>
+      
+  
+      
+          <div class="tp-lable">
+            <h3 class="lable">T_P</h3>
+            <input type="number" id="event-tp" placeholder="T_P የተደረገ">
+          </div>
+          
+          <div class="food-lable">
+            <h3 class="lable" style="font-size: 15px;">Food (drink or hot drink)</h3>
+            <input type="text" id="event-food" placeholder="Food">
+          </div>
+      
+          <div class="foodamt-lable">
+            <h3 class="lable">Food Amount</h3>
+            <input type="number" id="event-foodamt" placeholder="Food Amount">
+          </div>
+      
+        </div>
+      </div>
+      
+      <div class="submission-btn">
+        <button id="submit-btn">Submit</button>
+      </div>
       <!-- Receipt Popup -->
       <div class="modal" id="receiptModal">
         <div class="modal-content">
