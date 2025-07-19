@@ -7,7 +7,6 @@ import XLSX from 'xlsx';
 import fs from 'fs';
 import { DateTime } from 'luxon';
 import admin from 'firebase-admin';
-import fetch from 'node-fetch';
 
 
 const app = express();
@@ -209,25 +208,26 @@ bot.onText(/\/screenshot/, async (msg) => {
 
 
 
+
 // ─── Telegram Image Proxy Endpoint ─────────────────────────────
 app.get('/telegram-image/:fileId', async (req, res) => {
   const fileId = req.params.fileId;
+
   try {
     const file = await bot.getFile(fileId);
-    const url = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+    if (!file || !file.file_path) {
+      console.error("⚠️ No file path received from Telegram");
+      return res.status(404).send('Image not found (no file_path)');
+    }
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch from Telegram');
+    const fileUrl = `https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`;
+    return res.redirect(fileUrl);
 
-    const buffer = await response.buffer();
-    res.set('Content-Type', 'image/jpeg');
-    res.send(buffer);
-  } catch (error) {
-    console.error('Image proxy error:', error);
-    res.status(500).send('Image not found');
+  } catch (err) {
+    console.error("❌ Failed to get Telegram file:", err);
+    return res.status(404).send('Image not found');
   }
 });
-
 
 // ─── Start Server ──────────────────────────────────────────────
 app.listen(PORT, () => {
