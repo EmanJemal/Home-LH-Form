@@ -231,8 +231,9 @@ app.get('/telegram-image/:fileId', async (req, res) => {
 
 // ─── Start Server ──────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
+
 
 const forceLeaveSessions = {}; // { [chatId]: { expectedTimerId, salesName } }
 

@@ -176,7 +176,7 @@ document.getElementById('submit-btn').addEventListener('click', async () => {
     foodAmount: parseInt(document.getElementById('event-foodamt').value) || 0,
     drinkAmount: 0,
     Event_Type: document.getElementById('event-name').value,
-    Event_amount: parseInt(document.getElementById('event-tp').value) || 0,
+    Tax_amount: parseInt(document.getElementById('tax-tp').value) || 0,
   };
 
   try {
@@ -198,6 +198,7 @@ async function loadExistingOrders() {
 
   for (const title in data) {
     if (title.startsWith('__meta')) continue; // Skip meta titles
+    const isEvent = title.toLowerCase().includes("event");
 
     const orderList = Object.entries(data[title]);
 
@@ -209,17 +210,39 @@ async function loadExistingOrders() {
     const metas = metaKeys.map(key => ({ key, ...data[title][key] }));
 
     let totalUP = 0, totalTP = 0, totalFoodAmount = 0, totalDrinkAmount = 0, totalEventAmount = 0;
-
+    let totalTax_amount = 0;
     const rowsHTML = orderList
-      .filter(([key]) => !key.startsWith('__meta')) // exclude meta from table rows
-      .map(([_, entry]) => {
-        totalUP += parseFloat(entry.u_p || 0);
+    .filter(([key]) => !key.startsWith('__meta'))
+    .map(([_, entry]) => {
+      if (isEvent) {
+        totalTP += parseFloat(entry.t_p || 0);
+        totalTax_amount += parseFloat(entry.Tax_amount || 0);
+        totalFoodAmount += parseFloat(entry.foodAmount || 0);
+      } else {
         totalTP += parseFloat(entry.t_p || 0);
         totalFoodAmount += parseFloat(entry.foodAmount || 0);
         totalDrinkAmount += parseFloat(entry.drinkAmount || 0);
-        totalEventAmount += parseFloat(entry.Event_amount || 0);
+        totalEventAmount += parseFloat(entry.Event_amount || 0); // optional: remove if this shouldn't be shown for non-events
+      }
+      
+  
+      return isEvent
+        ? `
+          <tr>
+            <td>${entry.date || ''}</td>
+            <td>${entry.Name || ''}</td>
+            <td>${entry.Event_Type || ''}</td>
+            <td>${entry.Tax_amount || 0}</td>
+            <td>${entry.u_p || ''}</td>
+            <td>${entry.t_p || ''}</td>
+            <td>${entry.people_ብዛት || ''}</td>
+            <td>${entry.food || ''}</td>
+            <td>${entry.foodAmount || ''}</td>
+          </tr>
+          
+        `
 
-        return `
+        : `
           <tr>
             <td>${entry.date || ''}</td>
             <td>${entry.Name || ''}</td>
@@ -232,17 +255,20 @@ async function loadExistingOrders() {
             <td>${entry.drink || ''}</td>
             <td>${entry.drinkAmount || 0}</td>
             <td>${entry.Event_Type || ''}</td>
-            <td>${entry.Event_amount || 0}</td>
+            <td>${entry.Tax_amount || 0}</td>
           </tr>
         `;
-      }).join('');
+    }).join('');
+  
 
     // Calculate total amount from metas
     const totalMetaAmount = metas.reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
 
     // Calculate Left Price
-    const totalPrice = totalTP + totalFoodAmount + totalDrinkAmount + totalEventAmount;
-    const leftPrice = totalPrice - totalMetaAmount;
+    const totalPrice = isEvent
+    ? totalTP + totalTax_amount + totalFoodAmount
+    : totalTP + totalFoodAmount + totalDrinkAmount + totalEventAmount;
+      const leftPrice = totalPrice - totalMetaAmount;
 
     // Prepare meta display HTML
     const metaDisplayHTML = metas.length > 0
@@ -266,36 +292,67 @@ async function loadExistingOrders() {
         <button id="export-${title}" style="margin-left: 20px; margin-top: 8px;" class="export">Export to Excel</button>    
       </h2>
       <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th>room_ዝርዝር</th>
-            <th>room_ብዛት</th>
-            <th>U/P</th>
-            <th>T/P</th>
-            <th>Food</th>
-            <th>Amount</th>
-            <th>Drink</th>
-            <th>Amount</th>
-            <th>Event_Type</th>
-            <th>Amount</th>
-          </tr>
+<thead>
+  <tr>
+    ${
+      isEvent
+        ? `
+          <th>Date</th>
+          <th>Name</th>
+          <th>Event_Type</th>
+          <th>Tax_amount</th>
+          <th>U/P</th>
+          <th>T/P</th>
+          <th>people_ብዛት</th>
+          <th>Food</th>
+          <th>Food Amount</th>
+        `
+        : `
+          <th>Date</th>
+          <th>Name</th>
+          <th>room_ዝርዝር</th>
+          <th>room_ብዛት</th>
+          <th>U/P</th>
+          <th>T/P</th>
+          <th>Food</th>
+          <th>Amount</th>
+          <th>Drink</th>
+          <th>Amount</th>
+          <th>Event_Type</th>
+          <th>Amount</th>
+        `
+    }
+  </tr>
+</thead>
+
         </thead>
         <tbody>
           ${rowsHTML}
           <tr><td colspan="12"><hr></td></tr>
-          <tr>
-            <td colspan="4" style="text-align:left; font-size: 20px; font-weight: bold;">TOTAL = ${totalPrice}</td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalUP.toFixed(2)}</td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalTP.toFixed(2)}</td>
-            <td></td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalFoodAmount.toFixed(2)}</td>
-            <td></td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalDrinkAmount.toFixed(2)}</td>
-            <td></td>
-            <td style=" font-size: 20px;font-weight: bold;">${totalEventAmount.toFixed(2)}</td>
-          </tr>
+          ${isEvent ? `
+            <tr>
+    <td colspan="3" style="text-align:left; font-size: 20px; font-weight: bold;">TOTAL = ${totalPrice.toFixed(2)}</td>
+    <td style="font-size: 20px; font-weight: bold;">${totalTax_amount.toFixed(2)}</td>
+    <td style="font-size: 20px; font-weight: bold;"></td>
+    <td style="font-size: 20px; font-weight: bold;">${totalTP.toFixed(2)}</td>
+    <td></td>
+    <td></td>
+    <td style="font-size: 20px; font-weight: bold;">${totalFoodAmount.toFixed(2)}</td>
+            </tr>
+          ` : `
+            <tr>
+              <td colspan="4" style="text-align:left; font-size: 20px; font-weight: bold;">TOTAL = ${totalPrice}</td>
+              <td></td>
+              <td style="font-size: 20px; font-weight: bold;">${totalTP.toFixed(2)}</td>
+              <td></td>
+              <td style="font-size: 20px; font-weight: bold;">${totalFoodAmount.toFixed(2)}</td>
+              <td></td>
+              <td style="font-size: 20px; font-weight: bold;">${totalDrinkAmount.toFixed(2)}</td>
+              <td></td>
+              <td style="font-size: 20px; font-weight: bold;">${totalEventAmount.toFixed(2)}</td>
+            </tr>
+          `}
+          
         </tbody>
       </table>
 
@@ -361,17 +418,29 @@ async function loadExistingOrders() {
       const exportBtn = document.getElementById(`export-${title}`);
       if (exportBtn) {
         exportBtn.addEventListener('click', () => {
-          const header = [
-            "Date", "Name", "room_ዝርዝር", "room_ብዛት", "U/P", "T/P",
-            "Food", "Amount", "Drink", "Amount", "Event Type", "Amount"
-          ];
+          const isEvent = title.toLowerCase().includes("event");
+
+          const header = isEvent
+            ? ["Date", "Name", "Event Type", "Tax", "U/P", "T/P"]
+            : ["Date", "Name", "room_ዝርዝር", "room_ብዛት", "U/P", "T/P",
+               "Food", "Amount", "Drink", "Amount", "Event Type", "Amount"];
+          
     
           const metaPayments = [];
           let totalMeta = 0;
     
           const rows = orderList
-            .filter(([key]) => !key.startsWith('__meta'))
-            .map(([_, entry]) => [
+          .filter(([key]) => !key.startsWith('__meta'))
+          .map(([_, entry]) => isEvent
+            ? [
+                entry.date || '',
+                entry.Name || '',
+                entry.Event_Type || '',
+                entry.Event_amount || 0,
+                entry.u_p || '',
+                entry.t_p || ''
+              ]
+            : [
               entry.date || '',
               entry.Name || '',
               entry.room_ዝርዝር || '',
@@ -384,8 +453,9 @@ async function loadExistingOrders() {
               entry.drinkAmount || 0,
               entry.Event_Type || '',
               entry.Event_amount || 0
-            ]);
-
+              ]
+          );
+        
           // Collect meta payments
 
           orderList
@@ -399,13 +469,15 @@ async function loadExistingOrders() {
           const totalPayment = totalTP + totalFoodAmount + totalDrinkAmount + totalEventAmount;
           const leftToPay = (totalPayment - totalMeta).toFixed(2);
 
-          const totalRow = [
-            "TOTAL", "", "", "",
-            totalUP.toFixed(2), totalTP.toFixed(2),
-            "", totalFoodAmount.toFixed(2),
-            "", totalDrinkAmount.toFixed(2),
-            "", totalEventAmount.toFixed(2)
-          ];
+          const totalRow = isEvent
+          ? ["TOTAL", "", "", totalEventAmount.toFixed(2), totalUP.toFixed(2), totalTP.toFixed(2)]
+          : ["TOTAL", "", "", "",
+             totalUP.toFixed(2), totalTP.toFixed(2),
+             "", totalFoodAmount.toFixed(2),
+             "", totalDrinkAmount.toFixed(2),
+             "", totalEventAmount.toFixed(2)
+            ];
+        
 
           const today = new Date().toLocaleDateString('en-GB'); // Format dd/mm/yyyy
 
