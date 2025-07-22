@@ -110,6 +110,7 @@ saveBtn.addEventListener('click', async () => {
 
   const rows = tableBody.querySelectorAll('tr');
   const entries = [];
+  const timestamp = Date.now();
 
   for (const row of rows) {
     const inputs = row.querySelectorAll('input');
@@ -127,6 +128,7 @@ saveBtn.addEventListener('click', async () => {
         drinkAmount: parseInt(inputs[9].value) || 0,
         Event_Type: inputs[10].value,
         Event_amount: parseInt(inputs[11].value) || 0,
+        timestamp: timestamp,
       };
 
       entries.push(entry);

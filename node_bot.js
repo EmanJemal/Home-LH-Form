@@ -899,7 +899,7 @@ dailyOrdersRef.on('child_added', (snapshot) => {
     const data = orderSnap.val();
 
     // Skip old entries
-    if (!data.date || data.date < startTime) return;
+    if (!data.timestamp || data.timestamp < startTime) return;
 
     const msg = `
 🧾 *New Daily Order* under *${title}*
