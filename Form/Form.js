@@ -80,11 +80,44 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 });
 
+window.addEventListener('DOMContentLoaded', () => {
+    (async () => {
+        async function getTimerId() {
+            const timerRef = ref(database, 'timer');
+            const snapshot = await get(timerRef);
+          
+            if (!snapshot.exists()) return null;
+          
+            const timerData = snapshot.val();
+          
+            // Since timerData is a single object, get timer_id directly:
+            return timerData.name || null;
+          }
+          
+  
+      const timerId = await getTimerId();
+      console.log("✅ Fetched timerId:", timerId);
 
-
-
-
-
+      const salesname = document.querySelector('.sales-lable input');
+      if (salesname && timerId) {
+        salesname.value = timerId;
+      }
+  
+      const daysInput = document.querySelector('.days-lable input');
+      if (daysInput) {
+        daysInput.value = 1;
+      }
+  
+      const submitButton = document.querySelector('#submit-btn');
+      submitButton.addEventListener('click', async () => {
+        const customerRef = ref(database, 'customers');
+        const newCustomerRef = push(customerRef);
+        // Your save logic goes here
+      });
+    })();
+  });
+  
+  
 // Add event listener to the submit button
 const submitButton = document.querySelector('#submit-btn');
 document.querySelector('.days-lable').value = 1;
@@ -142,7 +175,7 @@ submitButton.addEventListener('click', async() => {
         alert("⛔ No active timer found. Start your timer from the bot first.");
       }
       console.log("✅ Timer ID:", timerId);
-
+      
 
     const date = new Date(timestamp);
 

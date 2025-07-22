@@ -329,30 +329,27 @@ bot.on("message", async (msg) => {
 });
 
 
+const leaveSession = {};
 
-async function handleLeave(chatId) {
-  const salesName = chatId == process.env.SALES_1_CHAT_ID ? "Mahlete" :
-                    chatId == process.env.SALES_2_CHAT_ID ? "amana" :
-                    chatId == process.env.SALES_3_CHAT_ID ? "sifan" : "unknown";
-
-  if (salesName === "unknown") {
-    return bot.sendMessage(chatId, "❌ You are not authorized to leave.");
-  }
-
+async function handleLeave(chatId, name) {
   const db = getDatabase();
 
-  const timerSnapshot = await db.ref(`timer/${salesName}`).once('value');
+  const timerSnapshot = await db.ref(`timer/${name}`).once('value');
   if (!timerSnapshot.exists()) {
-    return bot.sendMessage(chatId, "⚠️ You do not have an active timer.");
+    return bot.sendMessage(chatId, `⚠️ No active timer found for ${name}.`);
   }
 
   const timerId = timerSnapshot.val().timer_id;
 
-  await db.ref(`timer/${salesName}`).remove();
+  // Remove only from /timer/{name}
+  await db.ref(`timer/${name}`).remove();
+
+  // Mark timer ID as not used
   await db.ref(`timer_id_ver/${timerId}`).update({ Used: false, endTime: Date.now() });
 
-  bot.sendMessage(chatId, `👋 እናመሰገናለን የ sales ሰዐቶን ጨርሰዋል ሪፖርቶን ለመስራት ይሄን ID ይጠቀሙ: ${timerId} .`);
+  bot.sendMessage(chatId, `👋 እናመሰገናለን ${name} የ sales ሰዐት ተዘጋ! ይህን ID ይጠቀሙ: ${timerId}`);
 
+  // Generate Excel report...
   const paymentsSnap = await db.ref('Payments').once('value');
   const allData = [];
   let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
@@ -373,14 +370,11 @@ async function handleLeave(chatId) {
           paymentMethod: val.paymentMethod,
           phone: val.phone,
         });
-        if (val.paymentMethod?.toLowerCase().includes('cbe')) {
-          totalCBE += amount;
-        } else if (val.paymentMethod?.toLowerCase().includes('cash')) {
-          totalCash += amount;
-        } else if (val.paymentMethod?.toLowerCase().includes('telebirr')) {
-          totalTelebirr += amount;
-        }
-        
+
+        const method = val.paymentMethod?.toLowerCase();
+        if (method?.includes('cbe')) totalCBE += amount;
+        else if (method?.includes('cash')) totalCash += amount;
+        else if (method?.includes('telebirr')) totalTelebirr += amount;
       }
     });
   }
@@ -389,6 +383,7 @@ async function handleLeave(chatId) {
   allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
   allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
   allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
+
   const worksheet = XLSX.utils.json_to_sheet(allData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
@@ -407,10 +402,11 @@ async function handleLeave(chatId) {
 
   fs.unlinkSync(filePath);
 
-  bot.sendMessage(mainAdmin, `📢 *${salesName}* የsales ሰዐቶን ጨርሰዋል *${timerId}*. Excel report sent.`, {
+  bot.sendMessage(mainAdmin, `📢 *${name}* የ sales ሰዐቶን ጨርሰዋል — *${timerId}*.`, {
     parse_mode: "Markdown"
   });
 }
+
 async function handleForcedLeave(salesName, timerId, adminChatId) {
   const db = getDatabase();
   const timerRef = db.ref(`timer/${salesName}`);
@@ -632,11 +628,6 @@ async function handleHistoryExport(timerIds, chatId) {
 
 
 
-bot.onText(/\/leave/, async (msg) => {
-  await handleLeave(msg.chat.id);
-});
-
-
 bot.onText(/\/active/, async (msg) => {
   const chatId = msg.chat.id;
 
@@ -765,8 +756,10 @@ bot.on('callback_query', async (query) => {
 
   // /leave
   if (data === "/leave") {
-    return handleLeave(query.from.id);
+    leaveSession[chatId] = { step: "awaiting_name_leave" };
+    return bot.sendMessage(chatId, "👤 Please enter your *full name* to leave:", { parse_mode: "Markdown" });
   }
+  
 
   // Admin only
   if (!isAdmin) {
@@ -843,6 +836,36 @@ bot.on('message', async (msg) => {
       delete forceLeaveSessions[chatId];
       return bot.sendMessage(chatId, "❌ Incorrect Timer ID. Force leave cancelled.");
     }
+  }
+});
+
+bot.on("message", async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text?.trim();
+
+  // Existing logic for startSession...
+  if (startSession[chatId]) {
+    const session = startSession[chatId];
+    if (session.step === "awaiting_name_leave") {
+      session.name = text;
+      session.step = "awaiting_password";
+      return bot.sendMessage(chatId, "🔒 Enter the *password* to continue:", { parse_mode: "Markdown" });
+    }
+    if (session.step === "awaiting_password") {
+      if (text !== "151584") {
+        delete startSession[chatId];
+        return bot.sendMessage(chatId, "❌ Incorrect password.");
+      }
+      await handleStartMyTime(chatId, session.name);
+      delete startSession[chatId];
+    }
+  }
+
+  // ✅ Logic for leave session
+  if (leaveSession[chatId]) {
+    const name = text;
+    delete leaveSession[chatId];
+    return handleLeave(chatId, name);
   }
 });
 
