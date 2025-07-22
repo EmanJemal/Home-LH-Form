@@ -240,36 +240,33 @@ const forceLeaveSessions = {}; // { [chatId]: { expectedTimerId, salesName } }
 
 
 
-async function handleStartMyTime(chatId) {
+async function handleStartMyTime(chatId, enteredName) {
   const db = getDatabase();
   const mainAdmin = process.env.Main_ADMIN_CHAT_ID;
-  const salesName = chatId == process.env.SALES_1_CHAT_ID ? "Mahlete" :
-                    chatId == process.env.SALES_2_CHAT_ID ? "amana" :
-                    chatId == process.env.SALES_3_CHAT_ID ? "sifan" : "unknown";
 
   const timerSnapshot = await db.ref('timer').once('value');
   if (timerSnapshot.exists()) {
     const data = timerSnapshot.val();
-    if (Object.keys(data).length > 0 && !data[salesName]) {
-      return bot.sendMessage(chatId, `⚠️ ${Object.keys(data)[0]} የምትባል sales start ብላለች ስለዛ እሱዋ leaveትበል  .`);
+    const activeSales = Object.keys(data);
+    if (activeSales.length > 0 && !data[enteredName]) {
+      return bot.sendMessage(chatId, `⚠️ ${activeSales[0]} የምትባል sales ቀድሞውኑ start ብላለች። እባክህ እሷ በ /leave ትበል.`);
     }
   }
 
-  // Generate 5-digit unique timer ID
   let timerId;
   let attempts = 0;
   do {
-    timerId = Math.floor(100 + Math.random() * 900).toString();
+    timerId = Math.floor(10000 + Math.random() * 90000).toString();
     const usedSnapshot = await db.ref(`timer_id_ver/${timerId}/Used`).once('value');
     if (!usedSnapshot.exists()) break;
     attempts++;
   } while (attempts < 5);
 
   if (attempts >= 5) {
-    return bot.sendMessage(chatId, `❌ Failed to generate a unique timer ID. Try again.`);
+    return bot.sendMessage(chatId, "❌ Failed to generate a unique timer ID. Try again.");
   }
 
-  await db.ref(`timer/${salesName}`).set({
+  await db.ref(`timer/${enteredName}`).set({
     time: Date.now(),
     timer_id: timerId
   });
@@ -277,12 +274,12 @@ async function handleStartMyTime(chatId) {
   await db.ref(`timer_id_ver/${timerId}`).set({
     time: Date.now(),
     Used: true,
-    salesname: salesName
+    salesname: enteredName
   });
 
-  bot.sendMessage(mainAdmin, `✅ የ ${salesName} ሰዐት *ጀምሩዋል* with ID: *${timerId}*`, { parse_mode: "Markdown" });
+  bot.sendMessage(mainAdmin, `✅ የ ${enteredName} ሰዐት *ጀምሩዋል* with ID: *${timerId}*`, { parse_mode: "Markdown" });
 
-  bot.sendMessage(chatId, `✅ ሰዐቶ ጀምሩዋል ስራውን አስረክበው ሲወጡ leave ይበሉ ID: *${timerId}*`, {
+  bot.sendMessage(chatId, `✅ ሰዐቶ ጀምሩዋል። ስራውን አስረክበው ሲወጡ leave ይበሉ።\n\n🆔 ID: *${timerId}*`, {
     parse_mode: "Markdown",
     reply_markup: {
       inline_keyboard: [
@@ -297,9 +294,38 @@ async function handleStartMyTime(chatId) {
 
 const mainAdmin = process.env.Main_ADMIN_CHAT_ID;
 
-bot.onText(/\/start-my-time/, async (msg) => {
-  await handleStartMyTime(msg.chat.id);
+bot.onText(/\/start-my-time/, (msg) => {
+  const chatId = msg.chat.id;
+  startSession[chatId] = { step: "ask_name" };
+  bot.sendMessage(chatId, "👤 Please enter your *full name*:", { parse_mode: "Markdown" });
 });
+bot.on("message", async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
+
+  if (!startSession[chatId]) return;
+
+  const session = startSession[chatId];
+
+  if (session.step === "ask_name") {
+    session.name = text.trim();
+    session.step = "ask_password";
+    return bot.sendMessage(chatId, "🔒 Enter your *password*:", { parse_mode: "Markdown" });
+  }
+
+  if (session.step === "ask_password") {
+    const correctPassword = process.env.SALES_PASSWORD; // store in .env
+    if (text.trim() !== correctPassword) {
+      delete startSession[chatId];
+      return bot.sendMessage(chatId, "❌ Incorrect password. Access denied.");
+    }
+
+    session.step = "done";
+    await handleStartMyTime(chatId, session.name);
+    delete startSession[chatId];
+  }
+});
+
 
 
 async function handleLeave(chatId) {

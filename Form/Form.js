@@ -101,11 +101,11 @@ submitButton.addEventListener('click', async() => {
     const nationality = document.querySelector('.nationality-lable input').value;
     const sex = document.querySelector('#sex-options').value;
     const days = document.querySelector('.days-lable input').value;
-    const finalDate = document.querySelector('.final-days-lable input').value;
+//    const finalDate = document.querySelector('.final-days-lable input').value;
     const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value;
     const amountInBirr = document.querySelector('.calculation .answer').innerHTML;
     const nameOfRec = document.getElementById('passwordInput').innerHTML;
-    const screneenshot = document.querySelector('.screneenshot-lable input').value;
+//    const screneenshot = document.querySelector('.screneenshot-lable input').value;
 
     // ✅ This is the true customer ID 
     
@@ -116,7 +116,7 @@ submitButton.addEventListener('click', async() => {
         if (checkedRoom) selectedRoom = checkedRoom.value;
     });
     
-    if (!name || !salesname || !days || !finalDate || !selectedRoom || !selectedPayment) {
+    if (!name || !salesname || !days || !selectedRoom || !selectedPayment) {
         alert("Please fill in all required fields:\n- Name\n- Sales Name\n- Days\n- Final Date\n- Room Selection\n- Payment Method");
         return; // stop further execution
     }
@@ -173,12 +173,12 @@ submitButton.addEventListener('click', async() => {
         selectedRoom: selectedRoom,
         timestamp: ethiopianTime,
         paymentMethod: selectedPayment,
-        finalDate: finalDate,
+//        finalDate: finalDate,
         amountInBirr: amountInBirr,
         customerId: customerId,
         nameOfRec: nameOfRec,
         phone: phone,
-        screenshot_id: screneenshot,
+        //screenshot_id: screneenshot,
     }
 
     const paymentData = {
@@ -196,7 +196,7 @@ submitButton.addEventListener('click', async() => {
         amountInBirr: amountInBirr,
         nameOfRec: nameOfRec,
         phone: phone,
-        screenshot_id: screneenshot,
+       // screenshot_id: screneenshot,
     }
 
     showRemovePopup(userData);
@@ -487,7 +487,7 @@ function showRemovePopup(userData) {
 
     document.querySelector('.information-customer .name').innerHTML = userData.name;
     document.querySelector('.information-customer .age').innerHTML = userData.age;
-    document.querySelector('.information-customer .final-date').innerHTML = userData.finalDate;
+  //  document.querySelector('.information-customer .final-date').innerHTML = userData.finalDate;
     document.querySelector('.information-customer .payment-method').innerHTML = userData.selectedPayment;
     document.querySelector('.information-customer .room').innerHTML = userData.selectedRoom;
     document.querySelector('.information-customer .Price').innerHTML = userData.amountInBirr;
