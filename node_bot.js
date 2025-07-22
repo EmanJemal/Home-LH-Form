@@ -315,7 +315,7 @@ bot.on("message", async (msg) => {
   }
 
   if (session.step === "ask_password") {
-    const correctPassword = process.env.SALES_PASSWORD; // store in .env
+    const correctPassword = "151584"; // store in .env
     if (text.trim() !== correctPassword) {
       delete startSession[chatId];
       return bot.sendMessage(chatId, "❌ Incorrect password. Access denied.");
@@ -757,8 +757,10 @@ bot.on('callback_query', async (query) => {
 
   // /start-my-time
   if (data === "/start-my-time") {
-    return handleStartMyTime(query.from.id);
+    startSession[chatId] = { step: "awaiting_name" };
+    return bot.sendMessage(chatId, "👤 Please enter your *full name*:", { parse_mode: "Markdown" });
   }
+  
 
   // /leave
   if (data === "/leave") {
