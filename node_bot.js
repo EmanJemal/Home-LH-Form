@@ -256,7 +256,7 @@ async function handleStartMyTime(chatId, enteredName) {
   let timerId;
   let attempts = 0;
   do {
-    timerId = Math.floor(10000 + Math.random() * 90000).toString();
+    timerId = Math.floor(100 + Math.random() * 900).toString();
     const usedSnapshot = await db.ref(`timer_id_ver/${timerId}/Used`).once('value');
     if (!usedSnapshot.exists()) break;
     attempts++;
@@ -334,22 +334,35 @@ const leaveSession = {};
 async function handleLeave(chatId, name) {
   const db = getDatabase();
 
-  const timerSnapshot = await db.ref(`timer/${name}`).once('value');
+  const timerSnapshot = await db.ref(`timer`).once('value');
   if (!timerSnapshot.exists()) {
-    return bot.sendMessage(chatId, `⚠️ No active timer found for ${name}.`);
+    return bot.sendMessage(chatId, `⚠️ There is no active timer.`);
   }
 
-  const timerId = timerSnapshot.val().timer_id;
+  const timerData = timerSnapshot.val();
+  const timerId = timerData.timer_id;
+  const savedName = timerData.name;
 
-  // Remove only from /timer/{name}
-  await db.ref(`timer/${name}`).remove();
+  if (!timerId || !savedName || savedName.toLowerCase() !== name.toLowerCase()) {
+    return bot.sendMessage(chatId, `❌ Name mismatch. Only *${savedName}* can end this session.`, {
+      parse_mode: "Markdown"
+    });
+  }
 
-  // Mark timer ID as not used
-  await db.ref(`timer_id_ver/${timerId}`).update({ Used: false, endTime: Date.now() });
+  // ✅ Remove the timer
+  await db.ref(`timer`).remove();
 
-  bot.sendMessage(chatId, `👋 እናመሰገናለን ${name} የ sales ሰዐት ተዘጋ! ይህን ID ይጠቀሙ: ${timerId}`);
+  // ✅ Mark timer ID as not used
+  await db.ref(`timer_id_ver/${timerId}`).update({
+    Used: false,
+    endTime: Date.now()
+  });
 
-  // Generate Excel report...
+  bot.sendMessage(chatId, `👋 Thank you ${name}, your timer has ended. Timer ID: *${timerId}*`, {
+    parse_mode: "Markdown"
+  });
+
+  // ✅ Create Excel report
   const paymentsSnap = await db.ref('Payments').once('value');
   const allData = [];
   let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
@@ -389,7 +402,7 @@ async function handleLeave(chatId, name) {
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
 
   const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
-  const fileName = `timer_${timerId}_report_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const fileName = `timer_${timerId}_report_${new Date().toISOString().slice(0, 10)}.xlsx`;
   const filePath = `/tmp/${fileName}`;
 
   fs.writeFileSync(filePath, buffer);
@@ -406,6 +419,7 @@ async function handleLeave(chatId, name) {
     parse_mode: "Markdown"
   });
 }
+
 
 async function handleForcedLeave(salesName, timerId, adminChatId) {
   const db = getDatabase();
@@ -879,7 +893,13 @@ dailyOrdersRef.on('child_added', (snapshot) => {
   const title = snapshot.key;
   const titleRef = db.ref(`Daily_Orders/${title}`);
 
-  titleRef.on("child_added", (orderSnap) => {
+  titleRef.orderByKey().limitToLast(1).once('value', (snap) => {
+    snap.forEach(child => {
+      seenDailyOrders.add(`${title}/${child.key}`);
+    });
+  });
+
+  titleRef.on('child_added', (orderSnap) => {
     const orderKey = `${title}/${orderSnap.key}`;
     if (seenDailyOrders.has(orderKey)) return;
     seenDailyOrders.add(orderKey);
@@ -905,11 +925,17 @@ dailyOrdersRef.on('child_added', (snapshot) => {
 
 // Cash Register
 const cashRef = db.ref('cashregister');
-cashRef.on("child_added", (dateSnap) => {
+cashRef.on('child_added', (dateSnap) => {
   const date = dateSnap.key;
   const dateRef = db.ref(`cashregister/${date}`);
 
-  dateRef.on("child_added", (entrySnap) => {
+  dateRef.orderByKey().limitToLast(1).once('value', (snap) => {
+    snap.forEach(child => {
+      seenCashEntries.add(`${date}/${child.key}`);
+    });
+  });
+
+  dateRef.on('child_added', (entrySnap) => {
     const entryKey = `${date}/${entrySnap.key}`;
     if (seenCashEntries.has(entryKey)) return;
     seenCashEntries.add(entryKey);
