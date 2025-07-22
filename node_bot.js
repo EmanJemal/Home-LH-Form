@@ -887,24 +887,20 @@ bot.on("message", async (msg) => {
 const seenDailyOrders = new Set();
 const seenCashEntries = new Set();
 
+const startTime = Date.now(); // Record bot start time
+
 // Daily Orders
 const dailyOrdersRef = db.ref('Daily_Orders');
 dailyOrdersRef.on('child_added', (snapshot) => {
   const title = snapshot.key;
   const titleRef = db.ref(`Daily_Orders/${title}`);
 
-  titleRef.orderByKey().limitToLast(1).once('value', (snap) => {
-    snap.forEach(child => {
-      seenDailyOrders.add(`${title}/${child.key}`);
-    });
-  });
-
-  titleRef.on('child_added', (orderSnap) => {
-    const orderKey = `${title}/${orderSnap.key}`;
-    if (seenDailyOrders.has(orderKey)) return;
-    seenDailyOrders.add(orderKey);
-
+  titleRef.on("child_added", (orderSnap) => {
     const data = orderSnap.val();
+
+    // Skip old entries
+    if (!data.timestamp || data.timestamp < startTime) return;
+
     const msg = `
 🧾 *New Daily Order* under *${title}*
  Date: ${data.date || '-'}
@@ -925,22 +921,16 @@ dailyOrdersRef.on('child_added', (snapshot) => {
 
 // Cash Register
 const cashRef = db.ref('cashregister');
-cashRef.on('child_added', (dateSnap) => {
+cashRef.on("child_added", (dateSnap) => {
   const date = dateSnap.key;
   const dateRef = db.ref(`cashregister/${date}`);
 
-  dateRef.orderByKey().limitToLast(1).once('value', (snap) => {
-    snap.forEach(child => {
-      seenCashEntries.add(`${date}/${child.key}`);
-    });
-  });
-
-  dateRef.on('child_added', (entrySnap) => {
-    const entryKey = `${date}/${entrySnap.key}`;
-    if (seenCashEntries.has(entryKey)) return;
-    seenCashEntries.add(entryKey);
-
+  dateRef.on("child_added", (entrySnap) => {
     const val = entrySnap.val();
+
+    // Skip old entries
+    if (!val.timestamp || val.timestamp < startTime) return;
+
     const msg = `
 💰 *New Cash Register Entry* for ${date}
 🛏 Room: ${val.room || 0}
@@ -954,6 +944,7 @@ cashRef.on('child_added', (dateSnap) => {
     bot.sendMessage(mainAdmin, msg, { parse_mode: 'Markdown' });
   });
 });
+
 
 
 bot.onText(/^\/show$/, async (msg) => {
