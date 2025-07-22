@@ -386,24 +386,26 @@ input{
         <button class="save-btn" id="saveBtn">Save</button>
       </div>
     </div>
-<!-- Admin Panel Section -->
-<div class="admin-panel" style="padding: 20px; margin: 40px 20px; border: 2px solid #67a8df; border-radius: 10px;">
-    <h2 style="color: #fc6b13;">Admin Panel - Filter & Export</h2>
-  
-    <label><strong>Filter by Date:</strong></label>
-    <label>From: <input type="date" id="startDate"></label>
-    <label>To: <input type="date" id="endDate"></label>
-    <button onclick="fetchRangeData()" style="margin-left: 10px; background: #3498db; color: white; padding: 6px 12px; border: none; border-radius: 5px;">Load</button>
-    <button onclick="exportToExcel()" style="margin-left: 10px; background: #2ecc71; color: white; padding: 6px 12px; border: none; border-radius: 5px;">Export Excel</button>
-  
-    <div id="adminDataOutput" style="margin-top: 30px;"></div>
-  </div>
+
+    <!-- Admin Panel Section -->
+    <div class="admin-panel" style="padding: 20px; margin: 40px 20px; border: 2px solid #67a8df; border-radius: 10px;">
+        <h2 style="color: #fc6b13;">Admin Panel - Filter & Export</h2>
+      
+        <label><strong>Filter by Date:</strong></label>
+        <label>From: <input type="date" id="startDate"></label>
+        <label>To: <input type="date" id="endDate"></label>
+        <button onclick="fetchRangeData()" style="margin-left: 10px; background: #3498db; color: white; padding: 6px 12px; border: none; border-radius: 5px;">Load</button>
+        <button onclick="exportToExcel()" style="margin-left: 10px; background: #2ecc71; color: white; padding: 6px 12px; border: none; border-radius: 5px;">Export Excel</button>
+      
+        <div id="adminDataOutput" style="margin-top: 30px;"></div>
+      </div>
   
   
     <div class="container" id="existing-orders">
         <!-- Existing order groups (ASTU etc) will be inserted here -->
       </div>
     
+      <div id="preview"></div>
 
     
       <!-- Receipt Popup -->
@@ -468,44 +470,82 @@ input{
         return;
       }
 
+      // Example: Displaying Screenshot
+const screenshotId = "3512"; // from Firebase
+const snapshot = await get(child(ref(db), `Screenshot_id/${screenshotId}`));
+if (snapshot.exists()) {
+  const fileId = snapshot.val().image;
+  const img = document.createElement("img");
+  img.src = `https://home-lh-form-production.up.railway.app/telegram-image/${fileId}`;
+  document.getElementById("preview").appendChild(img);
+}
+
       const summary = document.createElement('div');
-      summary.innerHTML = `
-        <p><strong>Total Room:</strong> ${totalRoom}</p>
-        <p><strong>Total Restaurant:</strong> ${totalRestaurant}</p>
-        <p><strong>Total Dube:</strong> ${totalDube}</p>
-        <p><strong>Total Void:</strong> ${totalVoid}</p>
+summary.innerHTML = `
+  <p><strong>Total Room:</strong> ${totalRoom}</p>
+  <p><strong>Total Restaurant:</strong> ${totalRestaurant}</p>
+  <p><strong>Total Dube:</strong> ${totalDube}</p>
+  <p><strong>Total Void:</strong> ${totalVoid}</p>
+`;
+
+const table = document.createElement('table');
+table.innerHTML = `
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Room</th>
+      <th>Restaurant</th>
+      <th>Dube</th>
+      <th>Prepaid</th>
+      <th>Void</th>
+      <th>Time</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${allEntries.map(entry => {
+      const screenshotIds = entry?.screenshotIds ? Object.values(entry.screenshotIds) : [];
+      const hasScreenshots = screenshotIds.length > 0;
+
+      const rowHtml = `
+        <tr>
+          <td>${entry.date}</td>
+          <td>${entry.room}</td>
+          <td>${entry.restaurant}</td>
+          <td>${entry.dube}</td>
+          <td>${entry.prepaid}</td>
+          <td>${entry.void}</td>
+          <td>${entry.timestamp}</td>
+        </tr>
       `;
 
-      const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Room</th>
-            <th>Restaurant</th>
-            <th>Dube</th>
-            <th>Prepaid</th>
-            <th>Void</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${allEntries.map(entry => `
-            <tr>
-              <td>${entry.date}</td>
-              <td>${entry.room}</td>
-              <td>${entry.restaurant}</td>
-              <td>${entry.dube}</td>
-              <td>${entry.prepaid}</td>
-              <td>${entry.void}</td>
-              <td>${entry.timestamp}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      `;
+      const screenshotRow = hasScreenshots ? `
+        <tr>
+          <td colspan="7">
+            ${screenshotIds.map(id => {
+              const image = id.startsWith("AgA")
+                ? `https://home-lh-form-production.up.railway.app/telegram-image/${id}`
+                : (id.startsWith("http") ? id : "../products/placeholder.jpg");
+              return `
+                <img src="${image}" 
+                     alt="Screenshot" 
+                     style="margin-top: 5px; max-width: 250px; border: 1px solid #ccc; display: block;" />
+              `;
+            }).join('')}
+          </td>
+        </tr>
+      ` : '';
 
-      adminOut.appendChild(summary);
-      adminOut.appendChild(table);
+      return rowHtml + screenshotRow;
+    }).join('')}
+  </tbody>
+`;
+
+const container = document.getElementById('entry-results');
+container.appendChild(summary);
+container.appendChild(table);
+
+
+
     };
 
 window.exportToExcel = async function () {
@@ -553,45 +593,6 @@ window.exportToExcel = async function () {
 
 
 
-async function displayMetaScreenshots(metaPath, containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  const metaSnap = await get(ref(database, metaPath));
-  if (!metaSnap.exists()) {
-    container.innerHTML += `<p>No meta data found at ${metaPath}</p>`;
-    return;
-  }
-
-  const metaData = metaSnap.val();
-  const screenshotIds = metaData?.screenshotIds || {};
-
-  Object.values(screenshotIds).forEach(async (id) => {
-    const screenshotRef = ref(database, `Screenshot_id/${id}`);
-    const ssSnap = await get(screenshotRef);
-
-    const div = document.createElement('div');
-    div.style.marginTop = '20px';
-
-    if (ssSnap.exists()) {
-      const fileId = Object.values(ssSnap.val())[0];
-      const img = document.createElement('img');
-      img.src = `https://home-lh-form-production.up.railway.app/telegram-image/${fileId}`;
-      img.alt = "Screenshot";
-      img.style.maxWidth = '300px';
-      img.style.border = '1px solid #ccc';
-      div.appendChild(img);
-    } else {
-      div.innerHTML = `<p>Screenshot not available for ID: ${id}</p>`;
-    }
-
-    container.appendChild(div);
-  });
-}
-
-// Usage Example
-await displayMetaScreenshots('__meta__', 'adminDataOutput');
-await displayMetaScreenshots('__meta2__', 'adminDataOutput');
 
 </script>
         

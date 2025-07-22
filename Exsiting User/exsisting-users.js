@@ -865,13 +865,15 @@ showBTNtaju.addEventListener('click', () => {
   };
 });
 
+function normalizeKey(name) {
+  return name.toLowerCase().replace(/\s+/g, '_');
+}
 
-
-// Function to remove the customer and their booked room
 function removeCustomerORG(orgKey, roomNumber, bookingName) {
-  const orgRef = ref(database, `organisation_room/${bookingName}`); // ✅ safe path
+  const normalizedKey = normalizeKey(bookingName);
+  const orgRef = ref(database, `organisation_room/${orgKey}`);
 
-  console.log("📍 Checking path: organisation_room/" + bookingName); // will log "m_k"
+  console.log("📍 Checking path: organisation_room/" + orgKey);
 
   get(orgRef)
     .then((snapshot) => {
