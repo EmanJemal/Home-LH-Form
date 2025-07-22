@@ -290,6 +290,7 @@ async function handleStartMyTime(chatId, enteredName) {
 }
 
 
+const startSession = {}; // Stores per-user /startmytime session states
 
 
 const mainAdmin = process.env.Main_ADMIN_CHAT_ID;
