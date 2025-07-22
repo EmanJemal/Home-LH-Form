@@ -266,9 +266,10 @@ async function handleStartMyTime(chatId, enteredName) {
     return bot.sendMessage(chatId, "❌ Failed to generate a unique timer ID. Try again.");
   }
 
-  await db.ref(`timer/${enteredName}`).set({
+  await db.ref(`timer/`).set({
     time: Date.now(),
-    timer_id: timerId
+    timer_id: timerId,
+    name: enteredName
   });
 
   await db.ref(`timer_id_ver/${timerId}`).set({
@@ -757,7 +758,7 @@ bot.on('callback_query', async (query) => {
 
   // /start-my-time
   if (data === "/start-my-time") {
-    startSession[chatId] = { step: "awaiting_name" };
+    startSession[chatId] = { step: "ask_name" };
     return bot.sendMessage(chatId, "👤 Please enter your *full name*:", { parse_mode: "Markdown" });
   }
   
