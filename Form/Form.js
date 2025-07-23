@@ -149,13 +149,7 @@ submitButton.addEventListener('click', async() => {
         if (checkedRoom) selectedRoom = checkedRoom.value;
     });
     
-    if (!name || !salesname || !days || !selectedRoom || !selectedPayment) {
-        alert("Please fill in all required fields:\n- Name\n- Sales Name\n- Days\n- Final Date\n- Room Selection\n- Payment Method");
-        return; // stop further execution
-    }
-
     const timestamp = Date.now();
-
 
     async function getTimerId() {
         const timerRef = ref(database, 'timer');
@@ -164,18 +158,22 @@ submitButton.addEventListener('click', async() => {
         if (!snapshot.exists()) return null;
       
         const timerData = snapshot.val();
-        const salesNames = Object.keys(timerData);
-        if (salesNames.length === 0) return null;
-      
-        const firstSalesData = timerData[salesNames[0]];
-        return firstSalesData?.timer_id || null;
+        return timerData?.timer_id || null;
       }
+      
       const timerId = await getTimerId();
       if (!timerId) {
         alert("⛔ No active timer found. Start your timer from the bot first.");
       }
       console.log("✅ Timer ID:", timerId);
       
+      
+    if (!name || !salesname || !days || !selectedRoom || !selectedPayment) {
+        alert("Please fill in all required fields:\n- Name\n- Sales Name\n- Days\n- Final Date\n- Room Selection\n- Payment Method");
+        return; // stop further execution
+    }
+
+  
 
     const date = new Date(timestamp);
 
