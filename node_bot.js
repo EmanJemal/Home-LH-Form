@@ -329,54 +329,65 @@ bot.on("message", async (msg) => {
 });
 
 
+const leaveSessions = {}; // Track users waiting for confirmation
 
-const leaveSessions = {}; // To track who is being prompted
-
-async function handleLeave(chatId) {
+// /leave command — ask for Timer ID
+bot.onText(/^\/leave$/, async (msg) => {
+  const chatId = msg.chat.id;
   const db = getDatabase();
 
-  const timerSnapshot = await db.ref(`timer`).once('value');
-  if (!timerSnapshot.exists()) {
+  const timerSnapshot = await db.ref('timer').once('value');
+  const timerData = timerSnapshot.val();
+
+  if (!timerData || !timerData.timer_id) {
     return bot.sendMessage(chatId, `⚠️ There is no active timer.`);
   }
 
-  const timerData = timerSnapshot.val();
-  const activeTimerId = timerData?.timer_id;
-
-  if (!activeTimerId) {
-    return bot.sendMessage(chatId, `⚠️ No valid timer ID found in the system.`);
-  }
-
-  // Ask the user to enter the timer ID manually
+  // Save state that this user must now confirm
   leaveSessions[chatId] = true;
-  return bot.sendMessage(chatId, `🔒 Please enter your *Timer ID* to confirm ending the session:`, {
+
+  bot.sendMessage(chatId, `🔒 Please enter your *Timer ID* to confirm ending the session:`, {
     parse_mode: "Markdown"
   });
-}
 
+  // Timeout auto-cancel
+  setTimeout(() => {
+    if (leaveSessions[chatId]) {
+      delete leaveSessions[chatId];
+      bot.sendMessage(chatId, `⌛ Session timed out. Please send /leave again if you still want to end the timer.`);
+    }
+  }, 2 * 60 * 1000); // 2 minutes
+});
+
+// Message listener for Timer ID confirmation
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
 
-  if (!leaveSessions[chatId]) return; // ✅ use leaveSessions not leaveSession
+  if (!leaveSessions[chatId]) return; // not in confirmation flow
 
   const db = getDatabase();
-  const timerSnapshot = await db.ref(`timer`).once('value');
-  if (!timerSnapshot.exists()) {
+  const timerSnapshot = await db.ref('timer').once('value');
+  const timerData = timerSnapshot.val();
+
+  if (!timerData || !timerData.timer_id) {
     delete leaveSessions[chatId];
-    return bot.sendMessage(chatId, `⚠️ No active timer found.`);
+    return bot.sendMessage(chatId, `⚠️ Timer has already been ended or doesn't exist.`);
   }
 
-  const timerData = timerSnapshot.val();
-  const activeTimerId = timerData?.timer_id;
-  const name = timerData?.name || "Unknown";
+  const activeTimerId = timerData.timer_id;
 
   if (text !== activeTimerId) {
     return bot.sendMessage(chatId, `❌ Invalid Timer ID. Please try again.`);
   }
 
-  // ✅ Valid timer ID entered
-  await db.ref(`timer`).remove();
+  // ✅ VALIDATION SUCCESSFUL — Remove timer data
+  await db.ref('timer').remove();
+
+  // Optional: Also delete the specific user data if you store it elsewhere
+  // Example: await db.ref(`users/${chatId}`).remove(); // adjust path as needed
+
+  // Mark timer ID reusable and save end time
   await db.ref(`timer_id_ver/${activeTimerId}`).update({
     Used: false,
     endTime: Date.now()
@@ -384,12 +395,12 @@ bot.on('message', async (msg) => {
 
   delete leaveSessions[chatId];
 
-  bot.sendMessage(chatId, `👋 Thank you, your timer has ended. Timer ID: *${activeTimerId}*`, {
+  bot.sendMessage(chatId, `✅ Timer successfully ended for ID: *${activeTimerId}*`, {
     parse_mode: "Markdown"
   });
 
-  // Create report logic stays unchanged...
-  // (You can reuse the report/export section from before here)
+  // 🔽 Optional: Run export/report functions here
+  // createExcelReport(timerData, activeTimerId);
 });
 
 
@@ -612,11 +623,6 @@ async function handleHistoryExport(timerIds, chatId) {
 
   bot.sendMessage(chatId, summaryText, { parse_mode: 'Markdown' });
 }
-bot.onText(/^\/leave$/, async (msg) => {
-  const chatId = msg.chat.id;
-  handleLeave(chatId);
-});
-
 
 
 
@@ -748,7 +754,7 @@ bot.on('callback_query', async (query) => {
 
   // /leave
   if (data === "/leave") {
-    leaveSession[chatId] = { step: "awaiting_name_leave" };
+    leaveSessions[chatId] = { step: "awaiting_name_leave" };
     return bot.sendMessage(chatId, "👤 Please enter your *full name* to leave:", { parse_mode: "Markdown" });
   }
   
@@ -783,7 +789,94 @@ bot.on('callback_query', async (query) => {
 
   return bot.sendMessage(chatId, '❓ Unknown button command.');
 });
+async function handleLeave(chatId, name) {
+  const db = getDatabase();
 
+  const timerSnapshot = await db.ref(`timer`).once('value');
+  if (!timerSnapshot.exists()) {
+    return bot.sendMessage(chatId, `⚠️ There is no active timer.`);
+  }
+
+  const timerData = timerSnapshot.val();
+  const timerId = timerData.timer_id;
+  const savedName = timerData.name;
+
+  if (!timerId || !savedName || savedName.toLowerCase() !== name.toLowerCase()) {
+    return bot.sendMessage(chatId, `❌ Name mismatch. Only *${savedName}* can end this session.`, {
+      parse_mode: "Markdown"
+    });
+  }
+
+  // ✅ Remove the timer
+  await db.ref(`timer`).remove();
+
+  // ✅ Mark timer ID as not used
+  await db.ref(`timer_id_ver/${timerId}`).update({
+    Used: false,
+    endTime: Date.now()
+  });
+
+  bot.sendMessage(chatId, `👋 Thank you ${name}, your timer has ended. Timer ID: *${timerId}*`, {
+    parse_mode: "Markdown"
+  });
+
+  // ✅ Create Excel report
+  const paymentsSnap = await db.ref('Payments').once('value');
+  const allData = [];
+  let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+
+  if (paymentsSnap.exists()) {
+    paymentsSnap.forEach((snap) => {
+      const val = snap.val();
+      if (val.timeid === timerId) {
+        const amount = parseFloat(val.amountInBirr) || 0;
+        allData.push({
+          Name: val.name || "N/A",
+          Room: val.selectedRoom || "N/A",
+          Amount: amount + ' Birr',
+          Timestamp: val.timestamp || "N/A",
+          salesname: val.salesname,
+          sex: val.sex,
+          days: val.days,
+          paymentMethod: val.paymentMethod,
+          phone: val.phone,
+        });
+
+        const method = val.paymentMethod?.toLowerCase();
+        if (method?.includes('cbe')) totalCBE += amount;
+        else if (method?.includes('cash')) totalCash += amount;
+        else if (method?.includes('telebirr')) totalTelebirr += amount;
+      }
+    });
+  }
+
+  allData.push({});
+  allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
+
+  const worksheet = XLSX.utils.json_to_sheet(allData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+  const fileName = `timer_${timerId}_report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const filePath = `/tmp/${fileName}`;
+
+  fs.writeFileSync(filePath, buffer);
+
+  const mainAdmin = process.env.Main_ADMIN_CHAT_ID;
+  await bot.sendDocument(mainAdmin, filePath, {}, {
+    filename: fileName,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  fs.unlinkSync(filePath);
+
+  bot.sendMessage(mainAdmin, `📢 *${name}* የ sales ሰዐቶን ጨርሰዋል — *${timerId}*.`, {
+    parse_mode: "Markdown"
+  });
+}
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
@@ -854,9 +947,9 @@ bot.on("message", async (msg) => {
   }
 
   // ✅ Logic for leave session
-  if (leaveSession[chatId]) {
+  if (leaveSessions[chatId]) {
     const name = text;
-    delete leaveSession[chatId];
+    delete leaveSessions[chatId];
     return handleLeave(chatId, name);
   }
 });
