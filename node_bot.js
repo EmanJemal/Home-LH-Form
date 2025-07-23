@@ -1,533 +1,982 @@
-import { database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
-import { auth, onAuthStateChanged } from './Script/firebase.js';
+import TelegramBot from 'node-telegram-bot-api';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getDatabase } from 'firebase-admin/database';
+import dotenv from 'dotenv';
+import express from 'express';
+import XLSX from 'xlsx';
+import fs from 'fs';
+import { DateTime } from 'luxon';
+import admin from 'firebase-admin';
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    // 🚨 Not authenticated, redirect to login page
-    window.location.href = '../log-in/loginpage.html';
-  } else {
-    console.log('✅ Authenticated as:', user.uid);
-    // continue as normal...
+
+const app = express();
+const PORT = process.env.PORT || 5501;
+dotenv.config();
+
+const serviceAccountBase64 = process.env.FIREBASE_CONFIG_BASE64;
+if (!serviceAccountBase64) {
+  throw new Error("FIREBASE_CONFIG_BASE64 is not defined in .env");
+}
+
+const decodedServiceAccount = JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf8'));
+
+initializeApp({
+  credential: cert(decodedServiceAccount),
+  databaseURL: "https://home-land-hotel-default-rtdb.firebaseio.com" // your DB url here
+});
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://your-db.firebaseio.com"
+  });
+} else {
+  // reuse existing app
+  admin.app();
+}
+
+const db = admin.database();
+
+export const database = getDatabase();
+
+const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
+
+const salesChats = [
+  { id: process.env.SALES_1_CHAT_ID, code: '' },
+  { id: process.env.SALES_2_CHAT_ID, code: '' },
+  { id: process.env.SALES_3_CHAT_ID, code: '' },
+  { id: process.env.RAHEL_CHAT_ID, code: '' },
+];
+const sifan = [
+ { id: process.env.SALES_3_CHAT_ID, code: '' }
+];
+const rahel = [
+  { id: process.env.RAHEL_CHAT_ID, code: '' }
+ ];
+const amana = [
+  { id: process.env.SALES_2_CHAT_ID, code: '' }
+];
+const arafat = [
+  { id: process.env.SALES_1_CHAT_ID, code: '' }
+];
+
+const allowedUsers = [
+  parseInt(process.env.SALES_1_CHAT_ID),
+  parseInt(process.env.SALES_2_CHAT_ID),
+  parseInt(process.env.SALES_3_CHAT_ID),
+  parseInt(process.env.RAHEL_CHAT_ID),
+  parseInt(process.env.Main_ADMIN_CHAT_ID),
+];
+
+
+async function generateExcelForTimer(salesName, timerId, chatId) {
+  const paymentsSnap = await database.ref('Payments').once('value');
+  const allData = [];
+  let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+
+  if (paymentsSnap.exists()) {
+    paymentsSnap.forEach(snap => {
+      const val = snap.val();
+      if (val.timeid === String(timerId)) {
+        const amount = parseFloat(val.amountInBirr) || 0;
+        allData.push({
+          Name: val.name || "N/A",
+          Room: val.selectedRoom || "N/A",
+          Amount: amount + ' Birr',
+          Timestamp: val.timestamp || "N/A",
+          salesname: val.salesname,
+          sex: val.sex,
+          days: val.days,
+          paymentMethod: val.paymentMethod,
+          phone: val.phone,
+        });
+
+        const method = val.paymentMethod?.toLowerCase() || '';
+        if (method.includes('cbe')) totalCBE += amount;
+        else if (method.includes('cash')) totalCash += amount;
+        else if (method.includes('telebirr')) totalTelebirr += amount;
+      }
+    });
+  }
+
+  allData.push({});
+  allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
+
+  const worksheet = XLSX.utils.json_to_sheet(allData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+  const fileName = `excel_timer_${timerId}.xlsx`;
+  const filePath = `/tmp/${fileName}`;
+
+  fs.writeFileSync(filePath, buffer);
+
+  await bot.sendDocument(chatId, filePath, {}, {
+    filename: fileName,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  fs.unlinkSync(filePath); // cleanup
+
+  await bot.sendMessage(chatId, `✅ Excel report for *${salesName}* with Timer ID *${timerId}* has been sent.`, {
+    parse_mode: "Markdown"
+  });
+}
+
+
+bot.onText(/^\/start$/, async (msg) => {
+  const chatId = msg.chat.id;
+  const firstName = msg.from.first_name || 'there';
+  const isAdmin = chatId.toString() === process.env.Main_ADMIN_CHAT_ID;
+
+  // Optional user check
+  if (!allowedUsers.includes(chatId)) {
+    console.log(`❌ Unauthorized user attempted to /start: ${chatId}`);
+    return;
+  }
+
+  await database.ref('users/' + chatId).set({
+    firstName: firstName,
+    chatId: chatId,
+    joinedAt: Date.now()
+  });
+
+  const keyboard = [
+    [{ text: "⏱ Start My Timer", callback_data: "/start-my-time" }],
+    [{ text: "🔴 Leave", callback_data: "/leave" }],
+    [{ text: "🆘 Help", callback_data: "/help" }]
+  ];
+
+  if (isAdmin) {
+    keyboard.push([{ text: "📊 አሁን start ያለች sales መረጃ ", callback_data: "/active" }]);
+    keyboard.push([{ text: "📂 ከዚህ በፊት start ያለች ያሉ sales መረጃ", callback_data: "/history" }]);
+  }
+
+  await bot.sendMessage(chatId, `👋 Hello *${firstName}*! You're now connected to the bot.\nUse the buttons below:`, {
+    parse_mode: "Markdown",
+    reply_markup: {
+      inline_keyboard: keyboard
+    }
+  });
+});
+
+
+  
+  
+
+const screenshotSessions = {}; // Holds state for /screenshot flows
+
+// Handle /screenshot command with auto-generated 4-digit ID
+bot.onText(/\/screenshot/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  // ✅ Check if user is allowed
+  if (!allowedUsers.includes(chatId)) {
+    console.log(`❌ Unauthorized user attempted to /screenshot: ${chatId}`);
+    return;
+  }
+
+  // 🔄 Generate a unique 4-digit ID
+  let id;
+  let attempts = 0;
+  do {
+    id = Math.floor(1000 + Math.random() * 9000).toString(); // Random 4-digit number
+    const snapshot = await database.ref(`Screenshot_id/${id}`).once('value');
+    if (!snapshot.exists()) break;
+    attempts++;
+  } while (attempts < 10);
+
+  if (attempts >= 10) {
+    return bot.sendMessage(chatId, `❌ Failed to generate unique Screenshot ID. Try again.`);
+  }
+
+  // ✅ Save session state
+  screenshotSessions[chatId] = {
+    step: 'awaiting_photo',
+    screenshotId: id
+  };
+
+  bot.sendMessage(chatId, `🆔 Your Screenshot ID is *${id}*\n📤 Now send the screenshot photo:`, {
+    parse_mode: 'Markdown'
+  });
+});
+
+
+
+
+
+
+// ─── Telegram Image Proxy Endpoint ─────────────────────────────
+app.get('/telegram-image/:fileId', async (req, res) => {
+  const fileId = req.params.fileId;
+
+  try {
+    const file = await bot.getFile(fileId);
+    if (!file || !file.file_path) {
+      console.error("⚠️ No file path received from Telegram");
+      return res.status(404).send('Image not found (no file_path)');
+    }
+
+    const fileUrl = `https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`;
+    return res.redirect(fileUrl);
+
+  } catch (err) {
+    console.error("❌ Failed to get Telegram file:", err);
+    return res.status(404).send('Image not found');
   }
 });
 
- //localStorage.setItem('Entering Pin', 45284270810258310208532513043010152410200935993930) 
-
-const data = localStorage.getItem('Entering Pin');
-if(data != 45284270810258310208532513043010152410200935993930){
- document.body.innerHTML = '<h1>You are not allowed</h1>'
-}
-
-  
-
-
-// Fetch the room types from Firebase and update the webpage
-document.addEventListener("DOMContentLoaded", function () {
-    // Reference to the 'eachRoomPricing' node in Firebase
-    const roomsRef = ref(database, 'eachRoomsPricing');
-
-    const input = document.querySelector('.name-of-days');
-
-    // Fetch the room pricing data from 
-    get(roomsRef)
-        .then(snapshot => {
-            if (snapshot.exists()) {
-                const roomsData = snapshot.val(); // Get the data from Firebase
-
-                // Iterate over the roomsData to update the room types in HTML
-                for (const roomNumber in roomsData) {
-                    if (roomsData.hasOwnProperty(roomNumber)) {
-                        const room = roomsData[roomNumber];
-
-                        // Determine floor based on room number
-                        const floorSelector = roomNumber.startsWith('1') ? '#floor-1-rooms' : roomNumber.startsWith('2') ? '#floor-2-rooms' : roomNumber.startsWith('3') ? '#floor-3-rooms' : '#floor-4-rooms';
-
-                        // Find the corresponding room in the HTML by room number
-                        const roomItem = document.querySelector(`${floorSelector} li input[value="${roomNumber}"]`);
-
-                        if (roomItem) {
-                            // Update room type and pricing
-                            const roomTypeElement = roomItem.closest('li').querySelector('h4');
-                            const roomPriceElement = roomItem.closest('li').querySelector('.price');
-
-                            console.log(roomPriceElement)
-                            if (roomTypeElement) {
-                                roomTypeElement.innerText = room.roomType;
-
-                                    roomPriceElement.textContent = room.roomAmount;
-                              
-
-                                // Add CSS classes based on room type
-                                if (room.roomType === 'Double') {
-                                    roomTypeElement.className = 'double-type';
-                                } else if (room.roomType === 'Deluxe') {
-                                    roomTypeElement.className = 'deluxe-type';
-                                } else if (room.roomType === 'Standard') {
-                                    roomTypeElement.className = 'standard-type';
-                                } else if (room.roomType === 'Single') {
-                                    roomTypeElement.className = 'single-type';
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                console.log("No data available in Firebase.");
-            }
-        })
-        .catch(error => {
-            console.error("Error fetching room data from Firebase:", error);
-        });
+// ─── Start Server ──────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
 
-window.addEventListener('DOMContentLoaded', () => {
-    (async () => {
-        async function getTimerId() {
-            const timerRef = ref(database, 'timer');
-            const snapshot = await get(timerRef);
-          
-            if (!snapshot.exists()) return null;
-          
-            const timerData = snapshot.val();
-          
-            // Since timerData is a single object, get timer_id directly:
-            return timerData.name || null;
-          }
-          
-  
-      const timerId = await getTimerId();
-      console.log("✅ Fetched timerId:", timerId);
 
-      const salesname = document.querySelector('.sales-lable input');
-      if (salesname && timerId) {
-        salesname.value = timerId;
-      }
-  
-      const daysInput = document.querySelector('.days-lable input');
-      if (daysInput) {
-        daysInput.value = 1;
-      }
-  
-      const submitButton = document.querySelector('#submit-btn');
-      submitButton.addEventListener('click', async () => {
-        const customerRef = ref(database, 'customers');
-        const newCustomerRef = push(customerRef);
-        // Your save logic goes here
-      });
-    })();
+const forceLeaveSessions = {}; // { [chatId]: { expectedTimerId, salesName } }
+
+
+
+
+async function handleStartMyTime(chatId, enteredName) {
+  const db = getDatabase();
+  const mainAdmin = process.env.Main_ADMIN_CHAT_ID;
+
+  const timerSnapshot = await db.ref('timer').once('value');
+  if (timerSnapshot.exists()) {
+    const data = timerSnapshot.val();
+    const activeSales = Object.keys(data);
+    if (activeSales.length > 0 && !data[enteredName]) {
+      return bot.sendMessage(chatId, `⚠️ ${activeSales[0]} የምትባል sales ቀድሞውኑ start ብላለች። እባክህ እሷ በ /leave ትበል.`);
+    }
+  }
+
+  let timerId;
+  let attempts = 0;
+  do {
+    timerId = Math.floor(100 + Math.random() * 900).toString();
+    const usedSnapshot = await db.ref(`timer_id_ver/${timerId}/Used`).once('value');
+    if (!usedSnapshot.exists()) break;
+    attempts++;
+  } while (attempts < 5);
+
+  if (attempts >= 5) {
+    return bot.sendMessage(chatId, "❌ Failed to generate a unique timer ID. Try again.");
+  }
+
+  await db.ref(`timer/`).set({
+    time: Date.now(),
+    timer_id: timerId,
+    name: enteredName
   });
-  
-  
-// Add event listener to the submit button
-const submitButton = document.querySelector('#submit-btn');
-document.querySelector('.days-lable').value = 1;
 
-submitButton.addEventListener('click', async() => {
-    // Fetch form values
-    const customerRef = ref(database, 'customers');
-    const newCustomerRef = push(customerRef); // push generates unique key
-    const customerId = newCustomerRef.key;      
-    const name = document.querySelector('.name-lable input').value;
-    const phone = document.querySelector('.phone-lable input').value;
-    const salesname = document.querySelector('.sales-lable input').value;
-    const age = document.querySelector('.age-lable input').value;
-    const nationality = document.querySelector('.nationality-lable input').value;
-    const sex = document.querySelector('#sex-options').value;
-    const days = document.querySelector('.days-lable input').value;
-//    const finalDate = document.querySelector('.final-days-lable input').value;
-    const selectedPayment = document.querySelector('input[name="payment"]:checked')?.value;
-    const amountInBirr = document.querySelector('.calculation .answer').innerHTML;
-    const nameOfRec = document.getElementById('passwordInput').innerHTML;
-//    const screneenshot = document.querySelector('.screneenshot-lable input').value;
+  await db.ref(`timer_id_ver/${timerId}`).set({
+    time: Date.now(),
+    Used: true,
+    salesname: enteredName
+  });
 
-    // ✅ This is the true customer ID 
-    
-    // Identify selected room
-    let selectedRoom = null;
-    ['floor1', 'floor2', 'floor3', 'floor4'].forEach(floor => {
-        const checkedRoom = document.querySelector(`input[name="${floor}"]:checked`);
-        if (checkedRoom) selectedRoom = checkedRoom.value;
-    });
-    
-    const timestamp = Date.now();
+  bot.sendMessage(mainAdmin, `✅ የ ${enteredName} ሰዐት *ጀምሩዋል* with ID: *${timerId}*`, { parse_mode: "Markdown" });
 
-    async function getTimerId() {
-        const timerRef = ref(database, 'timer');
-        const snapshot = await get(timerRef);
-      
-        if (!snapshot.exists()) return null;
-      
-        const timerData = snapshot.val();
-        return timerData?.timer_id || null;
-      }
-      
-      const timerId = await getTimerId();
-      if (!timerId) {
-        alert("⛔ No active timer found. Start your timer from the bot first.");
-      }
-      console.log("✅ Timer ID:", timerId);
-      
-      
-    if (!name || !salesname || !days || !selectedRoom || !selectedPayment) {
-        alert("Please fill in all required fields:\n- Name\n- Sales Name\n- Days\n- Final Date\n- Room Selection\n- Payment Method");
-        return; // stop further execution
+  bot.sendMessage(chatId, `✅ ሰዐቶ ጀምሩዋል። ስራውን አስረክበው ሲወጡ leave ይበሉ።\n\n🆔 ID: *${timerId}*`, {
+    parse_mode: "Markdown",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "👋 Leave", callback_data: "/leave" }]
+      ]
     }
-
-  
-
-    const date = new Date(timestamp);
-
-        // Convert to Ethiopian time (UTC+3)
-        const options = {
-            timeZone: 'Africa/Addis_Ababa',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: true
-        };
-
-        // Format the date to Ethiopian time
-    const ethiopianTime = new Intl.DateTimeFormat('en-US', options).format(date);
-
-
-        
-    const userData = {
-        name: name,
-        salesname: salesname,
-        age: age,
-        nationality: nationality,
-        sex: sex,
-        days: days,
-        selectedRoom: selectedRoom,
-        timestamp: ethiopianTime,
-        paymentMethod: selectedPayment,
-//        finalDate: finalDate,
-        amountInBirr: amountInBirr,
-        customerId: customerId,
-        nameOfRec: nameOfRec,
-        phone: phone,
-        //screenshot_id: screneenshot,
-    }
-
-    const paymentData = {
-        name: name,
-        salesname: salesname,
-        timeid: String(timerId),
-        age: age,
-        nationality: nationality,
-        customerId: customerId,
-        sex: sex,
-        days: days,
-        selectedRoom: selectedRoom,
-        timestamp: ethiopianTime,
-        paymentMethod: selectedPayment,
-        amountInBirr: amountInBirr,
-        nameOfRec: nameOfRec,
-        phone: phone,
-       // screenshot_id: screneenshot,
-    }
-
-    showRemovePopup(userData);
-
-
-    document.getElementById('confirmRemoveBtn').addEventListener('click', ()=>{
-
-
-            
-            const userRef = ref(database, `customers/${customerId}`);
-            
-            const timestamp = Date.now();
-        // Create a Date object
-            const date = new Date(timestamp);
-
-            // Convert to Ethiopian time (UTC+3)
-            const options = {
-                timeZone: 'Africa/Addis_Ababa',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            };
-
-            // Format the date to Ethiopian time
-            const ethiopianTime = new Intl.DateTimeFormat('en-US', options).format(date);
-
-            let selectedRoom = null;
-            ['floor1', 'floor2', 'floor3', 'floor4'].forEach(floor => {
-                const checkedRoom = document.querySelector(`input[name="${floor}"]:checked`);
-                if (checkedRoom) selectedRoom = checkedRoom.value;
-            });
-        
-            if (selectedRoom && selectedRoom !== 'No room selected') {
-                const roomRef = ref(database, `rooms/${selectedRoom}`);
-                get(roomRef).then(snapshot => {
-                    if (snapshot.exists() && snapshot.val() === 'booked') {
-                        alert("⛔ This room was just booked by someone else. Please choose another.");
-                        return;
-                    }
-            
-                    // Room is not booked, proceed with saving
-                    updateRoomStatus(selectedRoom);
-            
-                    set(userRef, userData)
-                        .then(() => {
-                            alert('Customer information submitted successfully!');
-                            location.reload();
-                            document.querySelectorAll('input').forEach(input => input.value = '');
-                            document.querySelector('#sex-options').value = 'male';
-                        })
-                        .catch((error) => {
-                            console.error('Error saving data: ', error);
-                            alert('Failed to submit customer information!');
-                        });
-            
-                    const amtRef = ref(database, `Payments/${customerId}`);
-                    set(amtRef, paymentData)
-                        .then(() => {
-                            console.log('Payment data successfully saved!');
-                        })
-                        .catch((error) => {
-                            console.error('Error saving payment data:', error);
-                            alert('Failed to submit customer payment information!');
-                        });
-            
-                }).catch(error => {
-                    console.error('Error checking room status:', error);
-                    alert('Failed to verify room status. Please try again.');
-                });
-            }
-            
-
-            
-
-
-            // Function to generate a 7-digit random number
-            function generateRandomKey() {
-                return Math.floor(1000000000 + Math.random() * 90000000000); // Generates a 7-digit random number
-            }
-
-            const randomKey = generateRandomKey(); // Generate a unique 7-digit random number
-
-            // Reference to the Payments node in the database
-            const paymentRef = ref(database, 'Payments');
-
-            // Create a reference for the new payment entry with the 7-digit random key
-            const amtRef = ref(database, `Payments/${customerId}`);
-
-            set(amtRef, paymentData)
-                .then(() => {
-                    console.log('Payment data successfully saved!');
-                })
-                .catch((error) => {
-                    console.error('Error saving data: ', error);
-                    alert('Failed to submit customer payment information!');
-                });
-
-
-    });
-
-});
-
-// Real-time Listener for Room Availability
-// Reference both 'rooms' and 'organisation_room'
-const roomStatusRef = ref(database, 'rooms');
-const orgRoomsRef = ref(database, 'organisation_room');
-
-// Listen for updates on both references
-onValue(roomStatusRef, (roomSnapshot) => {
-    const roomsData = roomSnapshot.val();
-
-    onValue(orgRoomsRef, (orgSnapshot) => {
-        const organisations = orgSnapshot.val();
-
-        // Update the radio buttons based on both sources
-        document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            let isBooked = false;
-
-            // Check 'rooms' reference
-            if (roomsData && roomsData[radio.value] === 'booked') {
-                isBooked = true;
-            }
-
-            // Check 'organisation_room' reference
-            if (organisations) {
-                for (const org in organisations) {
-                    const bookedRooms = organisations[org]?.bookedRooms;
-                    if (bookedRooms && bookedRooms.includes(radio.value)) {
-                        isBooked = true;
-                        break;
-                    }
-                }
-            }
-
-            // Apply styles based on booking status
-            if (isBooked) {
-                radio.disabled = true;
-                radio.closest('li').classList.add('booked');
-                radio.closest('li').style.color = 'grey';
-            } else {
-                radio.disabled = false;
-                radio.closest('li').classList.remove('booked');
-                radio.closest('li').style.color = 'black';
-            }
-        });
-    });
-});
-
-// Update Room Status After Booking
-function updateRoomStatus(roomNumber) {
-    if (roomNumber && roomNumber !== 'No room selected') {
-        const roomRef = ref(database, `rooms/${roomNumber}`);
-        set(roomRef, 'booked')
-        .then(() => {
-            console.log(`Room ${roomNumber} marked as booked.`);
-        })
-        .catch((error) => {
-            console.error('Error updating room status: ', error);
-        });
-    }
+  });
 }
 
 
-// Fetch elements from the DOM
-const daysInput = document.querySelector('.days-lable input');
-const amountInBirr = document.querySelector('.amount-in-birr');
-const lengthOfStay = document.querySelector('.length-of-stay');
-const answerBrr = document.querySelector('.answer-brr');
-const extra_listner = document.querySelector('.extra-lable input');
+const startSession = {}; // Stores per-user /startmytime session states
 
-// Update the amount based on the number of days selected
-daysInput.addEventListener('input', () => {
-    const days = parseInt(daysInput.value) || 1;
-    const amount = parseFloat(document.querySelector('.amount-in-birr').textContent) || 0;
-    const totalAmount = amount * days;
-    const extra = parseFloat(document.querySelector('.extra-lable input').value) || 0;
 
-    lengthOfStay.textContent = `* ${days}`;
-    const finalAmt = totalAmount + extra;
+const mainAdmin = process.env.Main_ADMIN_CHAT_ID;
 
-    answerBrr.querySelector('.answer').textContent = `${finalAmt}`;
+bot.onText(/\/start-my-time/, (msg) => {
+  const chatId = msg.chat.id;
+  startSession[chatId] = { step: "ask_name" };
+  bot.sendMessage(chatId, "👤 Please enter your *full name*:", { parse_mode: "Markdown" });
+});
+bot.on("message", async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
+
+  if (!startSession[chatId]) return;
+
+  const session = startSession[chatId];
+
+  if (session.step === "ask_name") {
+    session.name = text.trim();
+    session.step = "ask_password";
+    return bot.sendMessage(chatId, "🔒 Enter your *password*:", { parse_mode: "Markdown" });
+  }
+
+  if (session.step === "ask_password") {
+    const correctPassword = "151584"; // store in .env
+    if (text.trim() !== correctPassword) {
+      delete startSession[chatId];
+      return bot.sendMessage(chatId, "❌ Incorrect password. Access denied.");
+    }
+
+    session.step = "done";
+    await handleStartMyTime(chatId, session.name);
+    delete startSession[chatId];
+  }
 });
 
 
-extra_listner.addEventListener('input', () => {
-    const days = parseInt(daysInput.value) || 1;
-    const amount = parseFloat(document.querySelector('.amount-in-birr').textContent) || 0;
-    const totalAmount = amount * days;
-    const extra = parseFloat(document.querySelector('.extra-lable input').value) || 0;
+const leaveSession = {};
 
-    lengthOfStay.textContent = `* ${days}`;
-    const finalAmt = totalAmount + extra;
+async function handleLeave(chatId, name) {
+  const db = getDatabase();
 
-    answerBrr.querySelector('.answer').textContent = `${finalAmt}`;
-});
+  const timerSnapshot = await db.ref(`timer`).once('value');
+  if (!timerSnapshot.exists()) {
+    return bot.sendMessage(chatId, `⚠️ There is no active timer.`);
+  }
+
+  const timerData = timerSnapshot.val();
+  const timerId = timerData.timer_id;
+  const savedName = timerData.name;
+
+  if (!timerId || !savedName || savedName.toLowerCase() !== name.toLowerCase()) {
+    return bot.sendMessage(chatId, `❌ Name mismatch. Only *${savedName}* can end this session.`, {
+      parse_mode: "Markdown"
+    });
+  }
+
+  // ✅ Remove the timer
+  await db.ref(`timer`).remove();
+
+  // ✅ Mark timer ID as not used
+  await db.ref(`timer_id_ver/${timerId}`).update({
+    Used: false,
+    endTime: Date.now()
+  });
+
+  bot.sendMessage(chatId, `👋 Thank you ${name}, your timer has ended. Timer ID: *${timerId}*`, {
+    parse_mode: "Markdown"
+  });
+
+  // ✅ Create Excel report
+  const paymentsSnap = await db.ref('Payments').once('value');
+  const allData = [];
+  let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+
+  if (paymentsSnap.exists()) {
+    paymentsSnap.forEach((snap) => {
+      const val = snap.val();
+      if (val.timeid === timerId) {
+        const amount = parseFloat(val.amountInBirr) || 0;
+        allData.push({
+          Name: val.name || "N/A",
+          Room: val.selectedRoom || "N/A",
+          Amount: amount + ' Birr',
+          Timestamp: val.timestamp || "N/A",
+          salesname: val.salesname,
+          sex: val.sex,
+          days: val.days,
+          paymentMethod: val.paymentMethod,
+          phone: val.phone,
+        });
+
+        const method = val.paymentMethod?.toLowerCase();
+        if (method?.includes('cbe')) totalCBE += amount;
+        else if (method?.includes('cash')) totalCash += amount;
+        else if (method?.includes('telebirr')) totalTelebirr += amount;
+      }
+    });
+  }
+
+  allData.push({});
+  allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
+
+  const worksheet = XLSX.utils.json_to_sheet(allData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+  const fileName = `timer_${timerId}_report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const filePath = `/tmp/${fileName}`;
+
+  fs.writeFileSync(filePath, buffer);
+
+  const mainAdmin = process.env.Main_ADMIN_CHAT_ID;
+  await bot.sendDocument(mainAdmin, filePath, {}, {
+    filename: fileName,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  fs.unlinkSync(filePath);
+
+  bot.sendMessage(mainAdmin, `📢 *${name}* የ sales ሰዐቶን ጨርሰዋል — *${timerId}*.`, {
+    parse_mode: "Markdown"
+  });
+}
 
 
+async function handleForcedLeave(salesName, timerId, adminChatId) {
+  const db = getDatabase();
+  const timerRef = db.ref(`timer/${salesName}`);
+  const snapshot = await timerRef.once('value');
 
+  if (!snapshot.exists()) {
+    return bot.sendMessage(adminChatId, `❌ No active timer found for ${salesName}.`);
+  }
 
+  await timerRef.remove();
+  await db.ref(`timer_id_ver/${timerId}`).update({ Used: false, endTime: Date.now() });
 
-// rooms price
+  const paymentsSnap = await db.ref('Payments').once('value');
+  const allData = [];
+  let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
 
-window.addEventListener('DOMContentLoaded', (event) => {
-    // Function to get room pricing from Firebase
-    const getRoomPricing = async () => {
-        try {
-            // Get the roomPricing data from the Firebase database
-            const roomPricingRef = ref(database, 'roomPricing');
-            const snapshot = await get(roomPricingRef);
-
-            if (snapshot.exists()) {
-                const roomPricing = snapshot.val();
-                updateRoomPrices(roomPricing);
-            } else {
-                console.log('No room pricing data available');
-            }
-        } catch (error) {
-            console.error('Error fetching room pricing:', error);
+  if (paymentsSnap.exists()) {
+    paymentsSnap.forEach((snap) => {
+      const val = snap.val();
+      if (val.timeid === timerId) {
+        const amount = parseFloat(val.amountInBirr) || 0;
+        allData.push({
+          Name: val.name || "N/A",
+          Room: val.selectedRoom || "N/A",
+          Amount: amount + ' Birr',
+          Timestamp: val.timestamp || "N/A",
+          salesname: val.salesname,
+          sex: val.sex,
+          days: val.days,
+          paymentMethod: val.paymentMethod,
+          phone: val.phone,
+        });
+        if (val.paymentMethod?.toLowerCase().includes('cbe')) {
+          totalCBE += amount;
+        } else if (val.paymentMethod?.toLowerCase().includes('cash')) {
+          totalCash += amount;
+        } else if (val.paymentMethod?.toLowerCase().includes('telebirr')) {
+          totalTelebirr += amount;
         }
-    };
-
-    // Function to update room prices in the DOM
-    const updateRoomPrices = (roomPricing) => {
-        // Select all h3 elements that represent room types
-        const roomTypes = document.querySelectorAll('h4');
-
-        roomTypes.forEach((roomTypeElement) => {
-            const roomTypeClass = roomTypeElement.className.toLowerCase().split('-')[0]; // Get the room type from the class name
-            const priceElement = roomTypeElement.nextElementSibling?.nextElementSibling; // Safe navigation using optional chaining
-
-            
-            // Ensure priceElement exists and update the price
-            if (priceElement && roomPricing[roomTypeClass] && priceElement.innerHTML.trim() === '') {
-                priceElement.textContent = roomPricing[roomTypeClass];
-            } else if (priceElement) {
-            }
-        });
-    };
-
-    // Fetch room pricing when the page loads
-    getRoomPricing();
-});
-
-
-
-
-
-
-function recalculateFinalAmount() {
-    const days = parseInt(document.querySelector('.days-lable input').value) || 1;
-    const price = parseFloat(document.querySelector('.amount-in-birr').textContent) || 0;
-    const extra = parseFloat(document.querySelector('.extra-lable input').value) || 0;
-
-    const total = (price * days) + extra;
-    document.querySelector('.length-of-stay').textContent = `* ${days}`;
-    document.querySelector('.answer-brr .answer').textContent = `${total}`;
-}
-
-
-
-
-/* Price calc */
-document.querySelectorAll('.floor-input').forEach(input => {
-    input.addEventListener('change', () => {
-        const priceElement = input.closest('li').querySelector('.price');
-        const price = parseFloat(priceElement?.textContent) || 0;
-
-        // Set the current price
-        document.querySelector('.amount-in-birr').textContent = price;
-
-        // Recalculate final amount based on new price
-        recalculateFinalAmount();
+        
+      }
     });
+  }
+
+  allData.push({});
+  allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
+  const worksheet = XLSX.utils.json_to_sheet(allData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+  const fileName = `forced_leave_${salesName}_${timerId}.xlsx`;
+  const filePath = `/tmp/${fileName}`;
+
+  fs.writeFileSync(filePath, buffer);
+
+  await bot.sendDocument(adminChatId, filePath, {}, {
+    filename: fileName,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  fs.unlinkSync(filePath);
+
+  await bot.sendMessage(adminChatId, `✅ Force leave completed for *${salesName}* with Timer ID *${timerId}*.\nExcel report has been sent.`, {
+    parse_mode: "Markdown"
+  });
+}
+
+async function handleActiveCommand(chatId) {
+  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
+  }
+
+  const timerSnapshot = await database.ref('timer').once('value');
+  if (!timerSnapshot.exists()) {
+    return bot.sendMessage(chatId, "✅ ማንም በ አሁን ሰዐት ሰዐቱን አላስጀመረም.");
+  }
+
+  const data = timerSnapshot.val();
+  const activeTimers = Object.entries(data);
+
+  for (const [salesName, details] of activeTimers) {
+    const { timer_id, time } = details;
+    const startTime = new Date(time).toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' });
+
+    const paymentsSnap = await database.ref('Payments').once('value');
+    let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+    let totalRoomsBooked = 0;  // Initialize rooms booked counter
+
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach(snap => {
+        const val = snap.val();
+        if (val.timeid === String(timer_id)) {
+          const amt = parseFloat(val.amountInBirr) || 0;
+          const method = val.paymentMethod?.toLowerCase() || '';
+          if (method.includes('cbe')) totalCBE += amt;
+          else if (method.includes('cash')) totalCash += amt;
+          else if (method.includes('telebirr')) totalTelebirr += amt;
+
+          // Count booked rooms if selectedRoom exists and is non-empty
+          if (val.selectedRoom) totalRoomsBooked++;
+        }
+      });
+    }
+
+    const text = `🟢 *Active Timer Info:*\n\n` +
+                 `👤 ስም: *${salesName}*\n` +
+                 `🆔 Timer ID: *${timer_id}*\n` +
+                 `⏰ ሰዐቱን የጀመረበት ሰዐት: *${startTime}*\n\n` +
+                 `💵 Cash: *${totalCash} Birr*\n` +
+                 `🏦 CBE: *${totalCBE} Birr*\n` +
+                 `📱 Telebirr: *${totalTelebirr} Birr*\n` +
+                 `🏨 sales ባስተናገደበት የጊዜ ገደብ ውስጥ የተያዙ አልጋዎች: *${totalRoomsBooked}*`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: `📤 Get Excel for ${salesName}`, callback_data: `get_excel_${salesName}_${timer_id}` },
+          { text: `👋 Force Leave`, callback_data: `force_leave_${salesName}_${timer_id}` }
+        ]
+      ]
+    };
+
+    await bot.sendMessage(chatId, text, {
+      parse_mode: "Markdown",
+      reply_markup: keyboard
+    });
+  }
+}
+
+
+async function handleHistoryCommand(chatId) {
+  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
+  }
+
+  historySessions[chatId] = { step: 'awaiting_timer_ids' };
+  await bot.sendMessage(chatId, "🔍 ወደሃላ ተመልሰው ማየት የሚፈልጉትን ያስገቡ, ከአንድ በላይ ካሎት በ ኮማ ይለያዩ (e.g. `1234, 3554`):", {
+    parse_mode: "Markdown"
+  });
+}
+
+async function handleHistoryExport(timerIds, chatId) {
+  if (!Array.isArray(timerIds) || timerIds.length === 0) {
+    return bot.sendMessage(chatId, "❌ No valid Timer IDs provided.");
+  }
+
+  const paymentsSnap = await database.ref('Payments').once('value');
+  const allData = [];
+
+  let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+  let totalRoomsBooked = 0;
+
+  if (paymentsSnap.exists()) {
+    paymentsSnap.forEach(snap => {
+      const val = snap.val();
+      if (timerIds.includes(val.timeid)) {
+        const amount = parseFloat(val.amountInBirr) || 0;
+        allData.push({
+          Name: val.name || "N/A",
+          Room: val.selectedRoom || "N/A",
+          Amount: amount + ' Birr',
+          Timestamp: val.timestamp || "N/A",
+          salesname: val.salesname,
+          sex: val.sex,
+          days: val.days,
+          paymentMethod: val.paymentMethod,
+          phone: val.phone,
+        });
+
+        const method = val.paymentMethod?.toLowerCase() || '';
+        if (method.includes('cbe')) totalCBE += amount;
+        else if (method.includes('cash')) totalCash += amount;
+        else if (method.includes('telebirr')) totalTelebirr += amount;
+
+        // Count rooms booked - assuming each val.selectedRoom represents 1 room booked
+        if (val.selectedRoom) totalRoomsBooked += 1;
+      }
+    });
+  }
+
+  allData.push({});
+  allData.push({ Name: 'Total CBE', Room: totalCBE + ' Birr' });
+  allData.push({ Name: 'Total Cash', Room: totalCash + ' Birr' });
+  allData.push({ Name: 'Total Telebirr', Room: totalTelebirr + ' Birr' });
+  allData.push({ Name: 'Total Rooms Booked', Room: totalRoomsBooked });
+
+  // Create Excel file
+  const worksheet = XLSX.utils.json_to_sheet(allData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'History');
+
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+  const fileName = `history_report_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const filePath = `/tmp/${fileName}`;
+
+  fs.writeFileSync(filePath, buffer);
+
+  // Send Excel report
+  await bot.sendDocument(chatId, filePath, {}, {
+    filename: fileName,
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  fs.unlinkSync(filePath);
+
+  // Send summary message
+  const summaryText = `🟢 *History Summary*\n\n` +
+                      `🆔 Timer IDs: *${timerIds.join(', ')}*\n\n` +
+                      `💵 Cash: *${totalCash} Birr*\n` +
+                      `🏦 CBE: *${totalCBE} Birr*\n` +
+                      `📱 Telebirr: *${totalTelebirr} Birr*\n` +
+                      `🏨 Total Rooms Booked: *${totalRoomsBooked}*`;
+
+  bot.sendMessage(chatId, summaryText, { parse_mode: 'Markdown' });
+}
+
+
+
+bot.onText(/\/active/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
+  }
+
+  const timerSnapshot = await database.ref('timer').once('value');
+  if (!timerSnapshot.exists()) {
+    return bot.sendMessage(chatId, "✅ No active timer sessions.");
+  }
+
+  const data = timerSnapshot.val();
+  const activeTimers = Object.entries(data);
+
+  for (const [salesName, details] of activeTimers) {
+    const { timer_id, time } = details;
+    const startTime = new Date(time).toLocaleString('en-US', { timeZone: 'Africa/Addis_Ababa' });
+
+    // 🧮 Calculate totals and count rooms booked
+    const paymentsSnap = await database.ref('Payments').once('value');
+    let totalCBE = 0, totalCash = 0, totalTelebirr = 0;
+    let totalRoomsBooked = 0;
+
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach(snap => {
+        const val = snap.val();
+        if (val.timeid === String(timer_id)) {
+          const amt = parseFloat(val.amountInBirr) || 0;
+          const method = val.paymentMethod?.toLowerCase() || '';
+          if (method.includes('cbe')) totalCBE += amt;
+          else if (method.includes('cash')) totalCash += amt;
+          else if (method.includes('telebirr')) totalTelebirr += amt;
+
+          // Count booked rooms for this timer ID
+          if (val.selectedRoom) totalRoomsBooked += 1;
+        }
+      });
+    }
+
+    const text = `🟢 *Active Timer Info:*\n\n` +
+                 `👤 Salesperson: *${salesName}*\n` +
+                 `🆔 Timer ID: *${timer_id}*\n` +
+                 `⏰ Started: *${startTime}*\n\n` +
+                 `💵 Cash: *${totalCash} Birr*\n` +
+                 `🏦 CBE: *${totalCBE} Birr*\n` +
+                 `📱 Telebirr: *${totalTelebirr} Birr*\n` +
+                 `🏨 Total Rooms Booked: *${totalRoomsBooked}*`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: `📤 Get Excel for ${salesName}`, callback_data: `get_excel_${salesName}_${timer_id}` },
+          { text: `👋 Force Leave`, callback_data: `force_leave_${salesName}_${timer_id}` }
+        ]
+      ]
+    };
+
+    await bot.sendMessage(chatId, text, {
+      parse_mode: "Markdown",
+      reply_markup: keyboard
+    });
+  }
+});
+
+
+
+
+const historySessions = {}; // For session state per chat
+
+bot.onText(/\/history/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
+  }
+
+  historySessions[chatId] = { step: 'awaiting_timer_ids' };
+  bot.sendMessage(chatId, "🔍 ወደሃላ ተመልሰው ማየት የሚፈልጉትን ያስገቡ, ከአንድ በላይ ካሎት በ ኮማ ይለያዩ (e.g. `1234, 3554`):", {
+    parse_mode: "Markdown"
+  });
 });
 
 
 
 
 
-// Function to show the popup for password input
-function showRemovePopup(userData) {
-    const modal = document.getElementById('removeCustomerModal');
-    modal.style.display = 'block';
+bot.onText(/\/help/, (msg) => {
+  const chatId = msg.chat.id;
+  const isAdmin = chatId == process.env.Main_ADMIN_CHAT_ID;
 
-    document.querySelector('.information-customer .name').innerHTML = userData.name;
-    document.querySelector('.information-customer .age').innerHTML = userData.age;
-  //  document.querySelector('.information-customer .final-date').innerHTML = userData.finalDate;
-    document.querySelector('.information-customer .payment-method').innerHTML = userData.selectedPayment;
-    document.querySelector('.information-customer .room').innerHTML = userData.selectedRoom;
-    document.querySelector('.information-customer .Price').innerHTML = userData.amountInBirr;
+  let helpText = `
+📖 *Available Commands:*
 
-    
+🟢 /start-my-time – Start your working timer session  
+🔴 /leave – End your session and receive the daily report  
+🆘 /help – Show this help message
+`;
+
+  if (isAdmin) {
+    helpText += `
+👮 *Admin Commands:*
+📊 /active – View which salesperson is currently active  
+📂 /history – View past activities and reports  
+`;
+  }
+
+  bot.sendMessage(chatId, helpText, { parse_mode: "Markdown" });
+});
 
 
-    // Close the popup when cancel button is clicked
-    document.getElementById('cancelRemoveBtn').onclick = () => {
-        modal.style.display = 'none';
-    };
-}
+
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.data;
+  const isAdmin = chatId.toString() === process.env.Main_ADMIN_CHAT_ID;
+
+  await bot.answerCallbackQuery(query.id);
+
+  // /start-my-time
+  if (data === "/start-my-time") {
+    startSession[chatId] = { step: "ask_name" };
+    return bot.sendMessage(chatId, "👤 Please enter your *full name*:", { parse_mode: "Markdown" });
+  }
+  
+
+  // /leave
+  if (data === "/leave") {
+    leaveSession[chatId] = { step: "awaiting_name_leave" };
+    return bot.sendMessage(chatId, "👤 Please enter your *full name* to leave:", { parse_mode: "Markdown" });
+  }
+  
+
+  // Admin only
+  if (!isAdmin) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to perform this action.");
+  }
+
+  // /active
+  if (data === "/active") {
+    return handleActiveCommand(chatId);
+    }
+
+  // /history
+  if (data === "/history") {
+    return handleHistoryCommand(chatId);
+    }
+
+  // get_excel_{salesName}_{timerId}
+  if (data.startsWith("get_excel_")) {
+    const [, , salesName, timerId] = data.split("_");
+    return generateExcelForTimer(salesName, timerId, chatId);
+  }
+
+  // force_leave_{salesName}_{timerId}
+  if (data.startsWith("force_leave_")) {
+    const [, salesName, timerId] = data.split("_");
+    forceLeaveSessions[chatId] = { expectedTimerId: timerId, salesName };
+    return bot.sendMessage(chatId, `⚠️ Please confirm the force leave by typing Timer ID: *${timerId}*`, { parse_mode: 'Markdown' });
+  }
+
+  return bot.sendMessage(chatId, '❓ Unknown button command.');
+});
+
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text?.trim();
+
+  // Handle screenshot photo
+  const screenshotSession = screenshotSessions[chatId];
+  if (screenshotSession?.step === 'awaiting_photo') {
+    if (msg.photo) {
+      const fileId = msg.photo[msg.photo.length - 1].file_id;
+      await database.ref(`Screenshot_id/${screenshotSession.screenshotId}`).set({
+        image: fileId,
+        date: new Date().toISOString(),
+        Id: chatId,
+      });
+
+      delete screenshotSessions[chatId];
+      return bot.sendMessage(chatId, `✅ Screenshot saved under ID *${screenshotSession.screenshotId}*`, { parse_mode: 'Markdown' });
+    } else if (msg.text && !msg.text.startsWith('/')) {
+      return bot.sendMessage(chatId, `❌ Please send a valid photo.`);
+    }
+    return;
+  }
+
+  // History input (admin only)
+  if (chatId.toString() === process.env.Main_ADMIN_CHAT_ID) {
+    const historySession = historySessions[chatId];
+    if (historySession?.step === 'awaiting_timer_ids') {
+      const timerIds = text.split(',').map(id => id.trim()).filter(Boolean);
+      if (timerIds.length === 0) {
+        return bot.sendMessage(chatId, "❌ Invalid input. Please enter at least one valid Timer ID.");
+      }
+      delete historySessions[chatId];
+      return handleHistoryExport(timerIds, chatId);
+    }
+
+    // Force Leave Confirmation
+    const force = forceLeaveSessions[chatId];
+    if (force && text === force.expectedTimerId) {
+      delete forceLeaveSessions[chatId];
+      return handleForcedLeave(force.salesName, force.expectedTimerId, chatId);
+    } else if (force) {
+      delete forceLeaveSessions[chatId];
+      return bot.sendMessage(chatId, "❌ Incorrect Timer ID. Force leave cancelled.");
+    }
+  }
+});
+
+bot.on("message", async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text?.trim();
+
+  // Existing logic for startSession...
+  if (startSession[chatId]) {
+    const session = startSession[chatId];
+    if (session.step === "awaiting_name_leave") {
+      session.name = text;
+      session.step = "awaiting_password";
+      return bot.sendMessage(chatId, "🔒 Enter the *password* to continue:", { parse_mode: "Markdown" });
+    }
+    if (session.step === "awaiting_password") {
+      if (text !== "151584") {
+        delete startSession[chatId];
+        return bot.sendMessage(chatId, "❌ Incorrect password.");
+      }
+      await handleStartMyTime(chatId, session.name);
+      delete startSession[chatId];
+    }
+  }
+
+  // ✅ Logic for leave session
+  if (leaveSession[chatId]) {
+    const name = text;
+    delete leaveSession[chatId];
+    return handleLeave(chatId, name);
+  }
+});
+
+
+const seenDailyOrders = new Set();
+const seenCashEntries = new Set();
+
+const startTime = Date.now(); // Record bot start time
+
+// Daily Orders
+const dailyOrdersRef = db.ref('Daily_Orders');
+dailyOrdersRef.on('child_added', (snapshot) => {
+  const title = snapshot.key;
+  const titleRef = db.ref(`Daily_Orders/${title}`);
+
+  titleRef.on("child_added", (orderSnap) => {
+    const data = orderSnap.val();
+
+    // Skip old entries
+    if (!data.timestamp || data.timestamp < startTime) return;
+
+    const msg = `
+🧾 *New Daily Order* under *${title}*
+ Date: ${data.date || '-'}
+ Name: ${data.Name || '-'}
+ room_ዝርዝር: ${data.room_ዝርዝር || '-'}
+ room_ብዛት: ${data.room_ብዛት || '-'}
+ U/P: ${data.u_p || '-'}
+ T/P: ${data.t_p || '-'}
+🍛 Food: ${data.food || '-'} (${data.foodAmount || 0})
+🥤 Drink: ${data.drink || '-'} (${data.drinkAmount || 0})
+☕ Hot Drink: ${data.hotDrink || '-'} (${data.hotAmount || 0})
+🛏 Room: ${data.room || '-'}
+    `.trim();
+
+    bot.sendMessage(mainAdmin, msg, { parse_mode: 'Markdown' });
+  });
+});
+
+// Cash Register
+const cashRef = db.ref('cashregister');
+cashRef.on("child_added", (dateSnap) => {
+  const date = dateSnap.key;
+  const dateRef = db.ref(`cashregister/${date}`);
+
+  dateRef.on("child_added", (entrySnap) => {
+    const val = entrySnap.val();
+
+    // Skip old entries
+    if (!val.timestamp || val.timestamp < startTime) return;
+
+    const msg = `
+💰 *New Cash Register Entry* for ${date}
+🛏 Room: ${val.room || 0}
+🍴 Restaurant: ${val.restaurant || 0}
+🥘 Dube: ${val.dube || 0}
+💳 Prepaid: ${val.prepaid || 'None'}
+❌ Void: ${val.void || 0}
+🕒 Time: ${val.timestamp || '-'}
+    `.trim();
+
+    bot.sendMessage(mainAdmin, msg, { parse_mode: 'Markdown' });
+  });
+});
+
+
+
+bot.onText(/^\/show$/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId.toString() !== mainAdmin) {
+    return bot.sendMessage(chatId, "⛔ You are not authorized.");
+  }
+
+const snapshot = await db.ref('timer_id_ver').once('value');
+const data = snapshot.val();
+
+  if (!data) {
+    return bot.sendMessage(chatId, "❌ No active timer IDs found.");
+  }
+
+  const entries = Object.entries(data).map(([id, val]) => ({
+    id,
+    salesname: val.salesname || 'Unknown',
+    time: val.time || 0
+  }));
+
+  // Sort by time descending
+  const sorted = entries.sort((a, b) => b.time - a.time).slice(0, 5);
+
+  const message = sorted.map((entry, index) => {
+    const timeStr = DateTime.fromMillis(entry.time)
+      .setZone('Africa/Addis_Ababa')
+      .toFormat('yyyy-MM-dd hh:mm a');
+
+    return `${index + 1}. 🆔 ${entry.id} | 👤 ${entry.salesname} | 📅 ${timeStr}`;
+  }).join('\n');
+
+  bot.sendMessage(chatId, `🕒 Latest 5 Active Timers:\n\n${message}`);
+});
