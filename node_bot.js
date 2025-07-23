@@ -1,5 +1,5 @@
 import { database, ref, set, get, update, remove, onValue, child, push } from '../Script/firebase.js';
-import { auth, onAuthStateChanged } from '../Script/firebase.js';
+import { auth, onAuthStateChanged } from './Script/firebase.js';
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
