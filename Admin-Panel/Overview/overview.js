@@ -157,11 +157,11 @@ onValue(paymentsRef, (snapshot) => {
     console.log("💰 Final Total:", total);
 
     dailyRevenueElement.innerHTML = `
-        <div><strong>Total:</strong> ${total.toLocaleString()} Birr</div>
         <div><strong>Cash:</strong> ${byMethod.Cash.toLocaleString()} Birr</div>
         <div><strong>Telebirr:</strong> ${byMethod.Telebirr.toLocaleString()} Birr</div>
         <div><strong>CBE:</strong> ${byMethod.CBE.toLocaleString()} Birr</div>
         <div><strong>Dube:</strong> ${byMethod.Dube.toLocaleString()} Birr</div>
+        <div><strong>Total:</strong> ${total.toLocaleString()} Birr</div>
     `;
 });
 

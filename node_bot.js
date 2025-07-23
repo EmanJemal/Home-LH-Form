@@ -354,12 +354,11 @@ async function handleLeave(chatId) {
   });
 }
 
-// Handle user reply with timer ID
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
 
-  if (!leaveSessions[chatId]) return; // not in a leave flow
+  if (!leaveSessions[chatId]) return; // ✅ use leaveSessions not leaveSession
 
   const db = getDatabase();
   const timerSnapshot = await db.ref(`timer`).once('value');
@@ -613,6 +612,11 @@ async function handleHistoryExport(timerIds, chatId) {
 
   bot.sendMessage(chatId, summaryText, { parse_mode: 'Markdown' });
 }
+bot.onText(/^\/leave$/, async (msg) => {
+  const chatId = msg.chat.id;
+  handleLeave(chatId);
+});
+
 
 
 
