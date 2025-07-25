@@ -11,6 +11,113 @@
     <link rel="stylesheet" href="../General/animation.css">
     <link rel="shortcut icon" href="../Images/favicon-32x32.png" type=image/x-icon>
     <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+
+    <style>
+        /* Container */
+#inOutGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Each row */
+.in-out-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px 80px 100px 60px;
+  gap: 12px;
+  align-items: center;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  transition: box-shadow 0.2s ease;
+}
+.in-out-row:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Checkboxes labels */
+.in-out-row label {
+  display: block;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+}
+.in-out-row input[type="checkbox"] {
+  margin-right: 4px;
+  transform: scale(1.1);
+}
+
+/* Text inputs */
+.in-out-row .reason,
+.in-out-row .amount {
+  width: 100%;
+  padding: 8px;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  transition: border-color 0.2s;
+}
+.in-out-row .reason:focus,
+.in-out-row .amount:focus {
+  border-color: #007BFF;
+  outline: none;
+}
+
+/* Save button */
+.in-out-row .saveInOutBtn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px;
+  font-size: 1.1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.in-out-row .saveInOutBtn:hover {
+  background: #218838;
+}
+
+/* “Add Row” button */
+.addRowBtn {
+  margin: 16px auto;
+  display: block;
+  background: #007BFF;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: background 0.2s, transform 0.1s;
+}
+.addRowBtn:hover {
+  background: #0069d9;
+  transform: translateY(-2px);
+}
+.addRowBtn:active {
+  background: #005cbf;
+  transform: translateY(0);
+}
+
+/* Date input */
+#in-out-date {
+  width: 100%;
+  max-width: 200px;
+  margin-bottom: 12px;
+  padding: 8px;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+    </style>
 </head>
 <body>
 
@@ -63,6 +170,59 @@
         Export All Customers to Excel
       </button>-->
 
+      <!-- Edit Customer Modal -->
+      <div id="editCustomerModal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <h2>Edit Customer</h2>
+      
+          <label>Name:
+            <input type="text" id="editName" />
+          </label>
+      
+          <label>Room:
+            <input type="text" id="editRoom" />
+          </label>
+      
+          <label>Days:
+            <input type="number" id="editDays" />
+          </label>
+      
+          <label>Start Date:
+            <input type="text" id="editStart" />
+          </label>
+      
+          <label>End Date:
+            <input type="text" id="editEnd" />
+          </label>
+      
+          <label>Original Amount:
+            <input type="number" id="editAmount" disabled />
+          </label>
+      
+          <label>New Amount:
+            <input type="number" id="editNewAmount" placeholder="Enter new amount" />
+          </label>
+      
+          <label id="reasonLabel" style="display:none;">Reason for amount change:
+            <input type="text" id="editReason" placeholder="Enter reason" />
+          </label>
+      
+          <label>Payment Method:
+            <select id="editPayment">
+              <option value="cash">Cash</option>
+              <option value="telebirr">Telebirr</option>
+              <option value="cbe">CBE</option>
+              <option value="debtors">Debtors</option>
+            </select>
+          </label>
+      
+          <div class="modal-buttons">
+            <button id="submitEditBtn">Save Changes</button>
+            <button type="button" onclick="closeEditModal()">Cancel</button>
+          </div>
+        </div>
+      </div>
+      
     <div class="floors-div">
 
     <div class="floors">
@@ -99,9 +259,14 @@
     
     </div>
     
+
+      
+      
+
+      <!--
     <div class="daily-amount">
         <button class="show-btn">Show</button>
-    </div>
+    </div>-->
 
     <div class="daily-amount">
         <button class="showBTNTimer">Show By Timer Id</button>
@@ -110,6 +275,14 @@
     <div class="daily-amount">
         <button class="show-btn-taju">Taju</button>
     </div>
+
+    <div class="in-out-form-box">
+        <input type="datetime" id="in-out-date" />
+        <div class="in-out-grid" id="inOutGrid"></div>
+        <div class="in-out-grid" id="inOutGrid-display"></div>
+        <button id="addRowBtn" class="addRowBtn">➕ Add Row</button>
+      </div>
+
     <!--
     <div class="org-floors">
         <h1 class="name">ድርጅት: Penta Web Developers and Promotion </h1>
@@ -158,6 +331,6 @@
 
 
     <script type="module" src="exsisting-users.js"></script>
-
+    <script type="module" src="../Exsiting User/in-out.js"></script>
 </body>
 </html>

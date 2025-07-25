@@ -189,6 +189,22 @@ li h4{
     font-size: 20px;
     font-weight: bold;
 }
+.phone-lable{
+    color:#fc6b13;
+}
+.phone-lable input {
+    color: #fc6b13; /* Styles the value text */
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 4px;
+  }
+  .phone-lable .lable {
+    color: #fc6b13;
+    font-size: 20px;
+    margin-bottom: 5px;
+  }
+    
+  
 @media(max-width: 1050px){
     .lable{
         font-size: 15px;
