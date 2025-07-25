@@ -621,7 +621,7 @@ showBTNtaju.addEventListener('click', () => {
             Room: val.selectedRoom || "N/A",
             Amount: amount + ' Birr',
             Method: val.paymentMethod || "N/A",
-            Timestamp: val.timestamp || "N/A",
+            phone: val.phone || "N/A",
             salesname: val.salesname || "N/A",
           });
         }
@@ -665,13 +665,13 @@ showBTNtaju.addEventListener('click', () => {
     `;
 
     document.getElementById("downloadExcel").addEventListener("click", () => {
-      const headers = [["Name", "Room", "Amount", "Method", "Timestamp", "Sales Name"]];
+      const headers = [["Name", "Room", "Amount", "Method", "Phone", "Sales Name"]];
       const paymentRows = allData.map(item => ([
         item.Name || '',
         item.Room || '',
         item.Amount || '',
         item.Method || '',
-        item.Timestamp || '',
+        item.Phone || '',
         item.salesname || ''
       ]));
     
