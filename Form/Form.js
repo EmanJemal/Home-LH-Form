@@ -164,6 +164,7 @@ submitButton.addEventListener('click', async() => {
       const timerId = await getTimerId();
       if (!timerId) {
         alert("⛔ No active timer found. Start your timer from the bot first.");
+        return;
       }
       console.log("✅ Timer ID:", timerId);
       
@@ -198,13 +199,14 @@ submitButton.addEventListener('click', async() => {
         name: name,
         salesname: salesname,
         age: age,
+        timeid: String(timerId),
         nationality: nationality,
         sex: sex,
         days: days,
         selectedRoom: selectedRoom,
         timestamp: ethiopianTime,
         paymentMethod: selectedPayment,
-//        finalDate: finalDate,
+//       finalDate: finalDate,
         amountInBirr: amountInBirr,
         customerId: customerId,
         nameOfRec: nameOfRec,

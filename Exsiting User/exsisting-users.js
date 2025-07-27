@@ -27,6 +27,7 @@ function loadCustomers() {
                     const roomNumber = customer.selectedRoom;
                     const days = customer.days;
                     const finalDate = customer.finalDate;
+                    const timeid = customer.timeid;
                     const startingDate = customer.timestamp;
                     const paymentMethod = customer.paymentMethod;
                     const customerName = customer.name;
@@ -105,14 +106,13 @@ function loadCustomers() {
                         const listItem = document.createElement('li');
                         listItem.innerHTML = `
                             ${roomNumber} <i class="fa-solid fa-arrow-right"></i> ${customerName}
-                            <i class="fa-solid fa-arrow-right fa-arrow-margin"></i>${days} Days
                             <i class="fa-solid fa-arrow-right"></i> ${paymentMethod}
                             <i class="fa-solid fa-arrow-right fa-arrow-margin"></i>
                             <span class="starting-date">${startingDate}</span>
                             <i class="fa-solid fa-arrow-right fa-arrow-margin"></i>
                             <span class="ending-date">${amt} Birr</span>
                             <span class="user-leaved"><i class="fa-solid fa-user-xmark"></i></span>
-                            ${exittime}
+                            <i class="fa-solid fa-arrow-right fa-arrow-margin"></i><span style="color:red;">${days}  DAYS</span>
                         `;
                         floorElement.appendChild(listItem);
                         const editBtn = document.createElement('button');
@@ -125,7 +125,7 @@ function loadCustomers() {
                                 days: days,
                                 paymentMethod: paymentMethod,
                                 startDate: startingDate,
-                                endDate: finalDate,
+                                timeid: timeid,
                                 amount: amt
                             });
                         });
@@ -150,6 +150,8 @@ function loadCustomers() {
                     const finalDate = customer.endDate;
                     const orgName = customer.name;
                     const customerName = customer.name;
+                    const timeid = customer.timeid;
+
 
 
                     for (let index = 0; index < roomNumber.length; index++) {
@@ -159,7 +161,7 @@ function loadCustomers() {
                             const paymentMethod = customer.paymentMethod;
                             const customerId = childSnapshot.key; // Get the customer ID
         
-                       // 🏢 Determine Floor Based on Room Number
+                       // 🏢 Determine Floor BastartingDatesed on Room Number
                             let floor;
                             if (element.room.startsWith('1')) floor = '.floors .floor-one ul';
                             else if (element.room.startsWith('2')) floor = '.floors .floor-two ul';
@@ -191,7 +193,7 @@ function loadCustomers() {
                                         days: days,
                                         paymentMethod: paymentMethod,
                                         startDate: startingDate,
-                                        endDate: finalDate,
+                                        timeid: timeid,
                                         amount: amt
                                     });
                                 });
@@ -233,11 +235,10 @@ function openEditModal(id, customerData) {
     document.getElementById('editDays').value = customerData.days;
     document.getElementById('editPayment').value = customerData.paymentMethod.toLowerCase();
     document.getElementById('editStart').value = customerData.startDate;
-    document.getElementById('editEnd').value = customerData.endDate;
+    document.getElementById('timerId').value = customerData.timeid || '';
     document.getElementById('editAmount').value = customerData.amount;
     document.getElementById('editNewAmount').value = '';
     document.getElementById('editReason').value = '';
-    document.getElementById('reasonLabel').style.display = 'none';
 
     document.getElementById('editCustomerModal').style.display = 'block';
 }
@@ -309,7 +310,7 @@ document.getElementById('submitEditBtn').addEventListener('click', async () => {
         days: document.getElementById('editDays').value,
         paymentMethod: document.getElementById('editPayment').value,
         timestamp: document.getElementById('editStart').value,
-        finalDate: document.getElementById('editEnd').value,
+        timeid: document.getElementById('timerId').value,
     };
 
     // Show/hide reason field if amount is changed
@@ -608,6 +609,7 @@ showBTNtaju.addEventListener('click', () => {
       paymentsSnap.forEach((snap) => {
         const val = snap.val();
         const amount = parseFloat(val.amountInBirr);
+        const phone = val.phone;
         const method = val.paymentMethod?.toLowerCase();
 
         if (timerIds.includes(val.timeid) && !isNaN(amount)) {
@@ -621,7 +623,7 @@ showBTNtaju.addEventListener('click', () => {
             Room: val.selectedRoom || "N/A",
             Amount: amount + ' Birr',
             Method: val.paymentMethod || "N/A",
-            phone: val.phone || "N/A",
+            phone: phone,
             salesname: val.salesname || "N/A",
           });
         }
@@ -663,6 +665,7 @@ showBTNtaju.addEventListener('click', () => {
       <button id="downloadExcel">📥 Download Excel</button>
       <button id="downloadWord">📄 Download Word</button>
     `;
+    
 
     document.getElementById("downloadExcel").addEventListener("click", () => {
       const headers = [["Name", "Room", "Amount", "Method", "Phone", "Sales Name"]];
@@ -671,7 +674,7 @@ showBTNtaju.addEventListener('click', () => {
         item.Room || '',
         item.Amount || '',
         item.Method || '',
-        item.Phone || '',
+        item.phone || '',
         item.salesname || ''
       ]));
     
