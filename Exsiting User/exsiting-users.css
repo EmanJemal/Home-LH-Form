@@ -1,4 +1,4 @@
-.floors, .daily-amount, .in-out-form-box{
+.floors, .daily-amount, .in-out-form-box,.listids{
     width: 90%;
     padding: 20px;
     height: fit-content;
@@ -102,6 +102,18 @@ li{
 .fa-arrow-margin{
     margin-left: 5px;
     margin-right: 5px;
+}
+.fa-user-tie{
+  font-size: 30px;
+  color: #fc6b13;
+  display: inline-block;
+  opacity: 0;
+}
+.listids i{
+  opacity: 0;
+}
+.listids span{
+  font-size: 20px;
 }
 .starting-date{
     color: #fc6b13;

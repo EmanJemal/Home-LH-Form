@@ -183,6 +183,14 @@
             <input type="text" id="editRoom" />
           </label>
 
+          <label>Phone Number:
+            <input type="text" id="phone" />
+          </label>
+
+          <label>Customer Id:
+            <input type="text" id="customerId" disabled />
+          </label>
+      
           <!--
           
           days
@@ -204,6 +212,10 @@
       
           <label>Timer Id:
             <input type="text" id="timerId" />
+          </label> 
+
+           <label>Sales Name:
+            <input type="text" id="salesname" />
           </label>
       
           <label>Original Amount:
@@ -229,7 +241,7 @@
       
           <div class="modal-buttons">
             <button id="submitEditBtn">Save Changes</button>
-            <button type="button" onclick="closeEditModal()">Cancel</button>
+            <button type="button" onclick="window.location.reload()">Cancel</button>
           </div>
         </div>
       </div>
@@ -278,6 +290,10 @@
     <div class="daily-amount">
         <button class="show-btn">Show</button>
     </div>-->
+
+    <div class="listids">
+
+    </div>
 
     <div class="daily-amount">
         <button class="showBTNTimer">Show By Timer Id</button>

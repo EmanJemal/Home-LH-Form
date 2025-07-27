@@ -8,6 +8,53 @@ if(data != 45284270810258310208532513043010152410200935993930){
 // Reference to the database
 const dbRef = ref(database);
 
+const listContainer = document.querySelector('.listids');
+
+get(child(dbRef, 'timer_id_ver')).then(async snapshot => {
+  if (snapshot.exists()) {
+    const data = snapshot.val();
+
+    // Extract and sort the latest 4 by time
+    const entries = Object.entries(data)
+      .map(([id, info]) => ({
+        id,
+        time: info.time || 0,
+        salesname: info.salesname
+      }))
+      .sort((a, b) => b.time - a.time)
+      .slice(0, 4);
+
+    // Convert timestamps to Gregorian dates (YYYY-MM-DD)
+    const gcDates = entries.map(entry => {
+      const date = new Date(entry.time);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    });
+
+    // Fetch Ethiopian equivalents using API
+    const queryParams = gcDates.map(date => `gc[]=${date}`).join('&');
+    const apiUrl = `https://api.ethioall.com/convert/api?${queryParams}`;
+
+    const response = await fetch(apiUrl);
+    const ecData = await response.json();
+
+    // Render output
+    listContainer.innerHTML = entries.map((entry, index) => {
+      const ec = ecData[index];
+      const dateStr = `${ec.day} ${ec.month_name.amharic} ${ec.year} (${ec.day_name.amharic})`;
+      return `<i class="fa-solid fa-user-tie"></i><span><div><strong>ID:</strong> ${entry.id}<i class="fa-solid fa-arrow-right fa-arrow-margin"></i><strong>ቀን:</strong> ${dateStr}<i class="fa-solid fa-arrow-right fa-arrow-margin"></i>${entry.salesname}</div><hr/><span>`;
+    }).join('');
+
+  } else {
+    listContainer.innerHTML = '<p>ምንም መረጃ አልተገኘም።</p>';
+  }
+}).catch(error => {
+  console.error(error);
+  listContainer.innerHTML = '<p>ይቅርታ፣ መረጃ ማስመዝገብ አልተቻለም።</p>';
+});
+
 // Function to load customers into their respective floors and rooms
 function loadCustomers() {
     Promise.all([
@@ -25,9 +72,12 @@ function loadCustomers() {
                     
                     const customer = childSnapshot.val();
                     const roomNumber = customer.selectedRoom;
+                    const customerId_edit = customer.customerId;
+                    const phone = customer.phone;
                     const days = customer.days;
                     const finalDate = customer.finalDate;
                     const timeid = customer.timeid;
+                    const salesname = customer.salesname;
                     const startingDate = customer.timestamp;
                     const paymentMethod = customer.paymentMethod;
                     const customerName = customer.name;
@@ -126,7 +176,10 @@ function loadCustomers() {
                                 paymentMethod: paymentMethod,
                                 startDate: startingDate,
                                 timeid: timeid,
-                                amount: amt
+                                amount: amt,
+                                salesname: salesname,
+                                phone: phone,
+                                customerId_edit: customerId_edit
                             });
                         });
                         listItem.appendChild(editBtn);
@@ -194,7 +247,7 @@ function loadCustomers() {
                                         paymentMethod: paymentMethod,
                                         startDate: startingDate,
                                         timeid: timeid,
-                                        amount: amt
+                                        amount: amt,
                                     });
                                 });
                                 listItem.appendChild(editBtn);
@@ -232,10 +285,13 @@ function openEditModal(id, customerData) {
 
     document.getElementById('editName').value = customerData.name;
     document.getElementById('editRoom').value = customerData.room;
+    document.getElementById('phone').value = customerData.phone;
     document.getElementById('editDays').value = customerData.days;
     document.getElementById('editPayment').value = customerData.paymentMethod.toLowerCase();
     document.getElementById('editStart').value = customerData.startDate;
     document.getElementById('timerId').value = customerData.timeid || '';
+    document.getElementById('salesname').value = customerData.salesname || '';
+    document.getElementById('customerId').value = customerData.customerId_edit;
     document.getElementById('editAmount').value = customerData.amount;
     document.getElementById('editNewAmount').value = '';
     document.getElementById('editReason').value = '';
@@ -496,7 +552,6 @@ Object.values(inOutSnap.val() || {}).forEach(dateGroup => {
     <button id="downloadWord">📄 Download Word</button>
   `;
   
-
   document.getElementById("downloadExcel").addEventListener("click", () => {
     const dataForExcel = [...allData];
   
@@ -514,48 +569,82 @@ Object.values(inOutSnap.val() || {}).forEach(dateGroup => {
       });
     });
   
-    // Push a blank row to separate
-    dataForExcel.push({});
-    // Append active in/out rows
-    dataForExcel.push(...activeInOutRows);
-    // Then add totals
-    dataForExcel.push({});
-    dataForExcel.push({ Name: 'Total Cash', Room: total.Cash + ' Birr' });
-    dataForExcel.push({ Name: 'Total Telebirr', Room: total.Telebirr + ' Birr' });
-    dataForExcel.push({ Name: 'Total CBE', Room: total.CBE + ' Birr' });
-    dataForExcel.push({ Name: 'Total Dube', Room: total.Dube + ' Birr' });
+    const uniqueRooms = new Set();
+    allData.forEach(item => {
+      if (item.Room && item.Room !== "N/A") {
+        uniqueRooms.add(item.Room);
+      }
+    });
   
-    // Add "Previous Sales" and "Next Sales"
-    dataForExcel.push({ Name: 'Previous Sales', Room: '_______' });
-    dataForExcel.push({ Name: 'Next Sales', Room: '_______' });
+    const final = finalTotals;
+  
+    // 🧾 Prepare additional rows
+    const extraRows = [
+      {}, // blank
+      { Name: `Total Rooms Booked: ${uniqueRooms.size}` },
+      { Name: `Total Cash`, Room: `${final.Cash} Birr` },
+      { Name: `Total Telebirr`, Room: `${final.Telebirr} Birr` },
+      { Name: `Total CBE`, Room: `${final.CBE} Birr` },
+      { Name: `Total Dube`, Room: `${final.Dube} Birr` },
+      {}, // blank
+      { Name: 'Previous Sales', Room: '_______' },
+      { Name: 'Next Sales', Room: '_______' }
+    ];
+  
+    // Combine data
+    dataForExcel.push({});
+    dataForExcel.push(...activeInOutRows);
+    dataForExcel.push(...extraRows);
   
     const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
   
+    // Set column widths
     worksheet['!cols'] = [
-      { wch: 20 }, // Name
+      { wch: 22 }, // Name
       { wch: 20 }, // Room
       { wch: 15 }, // Amount
       { wch: 15 }, // Method
-      { wch: 25 }, // Timestamp
+      { wch: 25 }, // Phone
       { wch: 20 }, // Salesname
     ];
   
     const range = XLSX.utils.decode_range(worksheet['!ref']);
-    const skipStylingRows = [dataForExcel.length - 2, dataForExcel.length - 1];
   
+    const lastRow = dataForExcel.length - 1;
+    const totalStartRow = dataForExcel.length - extraRows.length;
+    const totalRowsToHighlight = [
+      totalStartRow + 1, // Cash
+      totalStartRow + 2, // Telebirr
+      totalStartRow + 3, // CBE
+      totalStartRow + 4  // Dube
+    ];
+
+    const boldRows = [
+      dataForExcel.length - 2, // Previous Sales
+      dataForExcel.length - 1  // Next Sales
+    ];
+    
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
         const cell = worksheet[cellRef];
         if (!cell) continue;
-  
-        if (skipStylingRows.includes(R)) {
-          cell.s = { font: { bold: true, sz: 15 } };
-          continue;
-        }
-  
-        const baseStyle = {
-          font: { sz: R === 0 ? 18 : 15, bold: R === 0 },
+    
+        const isTitleRow = R === 0;
+        const isBoldExtra = boldRows.includes(R);
+        const isTotalRow = totalRowsToHighlight.includes(R);
+    
+        const style = {
+          font: {
+            sz: isTitleRow || isBoldExtra || isTotalRow ? 15 : 12,
+            bold: isTitleRow || isBoldExtra || isTotalRow,
+          },
+          alignment: {
+            horizontal: "left",
+          },
+          fill: isTotalRow
+            ? { fgColor: { rgb: "C9DAF8" } } // 💙 light blue background for totals
+            : undefined,
           border: {
             top: { style: "thin", color: { rgb: "000000" } },
             bottom: { style: "thin", color: { rgb: "000000" } },
@@ -563,17 +652,20 @@ Object.values(inOutSnap.val() || {}).forEach(dateGroup => {
             right: { style: "thin", color: { rgb: "000000" } },
           },
         };
-        cell.s = baseStyle;
+    
+        cell.s = style;
       }
     }
+    
   
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Timer Report');
   
     const today = new Date();
-    const fileName = `timer_${timerId}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.xlsx`;
+    const fileName = `timer_${timerIds.join('_')}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   });
+  
   
   };
 });
@@ -667,7 +759,21 @@ showBTNtaju.addEventListener('click', () => {
     `;
     
 
-    document.getElementById("downloadExcel").addEventListener("click", () => {
+    document.getElementById("downloadExcel").addEventListener("click", async () => {
+      // Step 1: Fetch current Ethiopian date
+      let ethiopianDateText = '';
+      try {
+        const res = await fetch('https://date.ethioall.com/api/date');
+        const data = await res.json();
+        ethiopianDateText = `${data.day} ${data.date} ${data.month} ${data.year}`;
+      } catch (e) {
+        console.warn('Could not fetch Ethiopian date:', e);
+        ethiopianDateText = 'N/A';
+      }
+    
+      // Step 2: Prepare headers and payment data
+      const titleRow = ["Home Land Hotel"]; // Title
+      const dateRow = [`የኢትዮጵያ ቀን፡ ${ethiopianDateText}`];
       const headers = [["Name", "Room", "Amount", "Method", "Phone", "Sales Name"]];
       const paymentRows = allData.map(item => ([
         item.Name || '',
@@ -678,47 +784,68 @@ showBTNtaju.addEventListener('click', () => {
         item.salesname || ''
       ]));
     
-      // Sum totals from allData
+      // Step 3: Totals Row
+      const uniqueRooms = new Set();
+      const final = finalTotals;
       allData.forEach(item => {
-        const amount = parseFloat(item.Amount.replace(" Birr", "")) || 0;
-        if (item.Method === "CBE") total.CBE += amount;
-        else if (item.Method === "Telebirr") total.Telebirr += amount;
-        else if (item.Method === "Cash") total.Cash += amount;
-        else if (item.Method === "Dube") total.Dube += amount;
+        if (item.Room && item.Room !== "N/A") {
+          uniqueRooms.add(item.Room);
+        }
       });
-    
-      // Sum deductions from in_outData
-      const in_outData = Object.values(inOutSnap.val() || {}).flatMap(dateGroup =>
-        Object.values(dateGroup).filter(entry =>
-          timerIds.includes(entry.timer_id)
-        )
-      );
-
-      
-      in_outData.forEach(entry => {
-        const amount = parseFloat(entry.amount) || 0;
-        const method = entry.paymentMethod;
-        if (method === "CBE") deduction.CBE += amount;
-        else if (method === "Telebirr") deduction.Telebirr += amount;
-        else if (method === "Cash") deduction.Cash += amount;
-        else if (method === "Dube") deduction.Dube += amount;
-      });
-    
-      
-      const final = finalTotals;  // ✅ Use what you already calculated
-
+      const totalRoomsBooked = uniqueRooms.size;
+  
       const totalRow = [
-        ["", "", `CBE: ${final.CBE}`, `Telebirr: ${final.Telebirr}`, `Cash: ${final.Cash}`, `Dube: ${final.Dube}`]
+        [`Total Rooms Booked: ${totalRoomsBooked}`, "", "", "", "", ""],
+        [`Total Cash: ${final.Cash} Birr`, "", "", "", "", ""],
+        [`Total Telebirr: ${final.Telebirr} Birr`, "", "", "", "", ""],
+        [`Total CBE: ${final.CBE} Birr`, "", "", "", "", ""],
+        [`Total Dube: ${final.Dube} Birr`, "", "", "", "", ""]
       ];
+      
+      
     
+      // Step 4: Signature rows
+      const emptyRow = [""];
+      const signatureRow = ["Signature (Taju): __________________", "", "", "Signature (Sales): __________________"];
+    
+      // Step 5: Create worksheet
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([...headers, ...paymentRows, [], ...totalRow]);
+      const wsData = [
+        titleRow,
+        dateRow,
+        [],
+        ...headers,
+        ...paymentRows,
+        [],
+        ...totalRow,
+        [],
+        signatureRow
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
     
       const range = XLSX.utils.decode_range(ws['!ref']);
     
-      // Apply header style
+      // Step 6: Apply styles
+      // Title row styling
+      const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
+      ws[titleCell].s = {
+        font: { name: "Arial", sz: 24, bold: true },
+        alignment: { horizontal: "center", vertical: "center" }
+      };
+      ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }]; // Merge title
+    
+      // Ethiopian date styling
+      const dateCell = XLSX.utils.encode_cell({ r: 1, c: 0 });
+      ws[dateCell].s = {
+        font: { name: "Arial", sz: 14, italic: true },
+        alignment: { horizontal: "left" }
+      };
+      ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }); // Merge date
+    
+      // Header row styling
+      const headerStartRow = 3;
       for (let C = 0; C < headers[0].length; ++C) {
-        const cell = XLSX.utils.encode_cell({ r: 0, c: C });
+        const cell = XLSX.utils.encode_cell({ r: headerStartRow, c: C });
         if (ws[cell]) {
           ws[cell].s = {
             font: { bold: true },
@@ -728,22 +855,36 @@ showBTNtaju.addEventListener('click', () => {
         }
       }
     
-      // Bold total row
-      const totalRowIndex = headers.length + paymentRows.length + 1;
-      for (let C = 0; C < totalRow[0].length; ++C) {
-        const cell = XLSX.utils.encode_cell({ r: totalRowIndex, c: C });
+      // Totals row styling
+      const totalRowIndex = headerStartRow + paymentRows.length + 2;
+      for (let R = 0; R < totalRow.length; ++R) {
+        const cell = XLSX.utils.encode_cell({ r: totalRowIndex + R, c: 0 });
         if (ws[cell]) {
           ws[cell].s = {
             font: { bold: true },
-            alignment: { horizontal: "center" },
-            fill: { fgColor: { rgb: "C9DAF8" } }
+            alignment: { horizontal: "left" },
+          };
+        }
+      }
+      
+    
+      // Signatures row styling
+      const signatureRowIndex = totalRowIndex + 2;
+      for (let C = 0; C < signatureRow.length; ++C) {
+        const cell = XLSX.utils.encode_cell({ r: signatureRowIndex, c: C });
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { italic: true },
+            alignment: { horizontal: "left" }
           };
         }
       }
     
+      // Step 7: Save file
       XLSX.utils.book_append_sheet(wb, ws, "Final Report");
-      XLSX.writeFile(wb, `Final_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      XLSX.writeFile(wb, `Home_Land_Hotel_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
     });
+    
     
 
     
