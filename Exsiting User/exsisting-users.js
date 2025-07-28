@@ -662,8 +662,9 @@ Object.values(inOutSnap.val() || {}).forEach(dateGroup => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Timer Report');
   
     const today = new Date();
-    const fileName = `timer_${timerIds.join('_')}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.xlsx`;
+    const fileName = `timer_${timerId}_report_${today.getFullYear()}_${today.getMonth() + 1}_${today.getDate()}.xlsx`;
     XLSX.writeFile(workbook, fileName);
+    
   });
   
   
@@ -749,14 +750,31 @@ showBTNtaju.addEventListener('click', () => {
     };
 
     const containerDiv = document.querySelector('.daily-amount');
-    containerDiv.innerHTML = `
-      <div class="cash"><h1>Cash</h1><h2>${finalTotals.Cash} Birr</h2></div>
-      <div class="cash"><h1>Telebirr</h1><h2>${finalTotals.Telebirr} Birr</h2></div>
-      <div class="cash"><h1>CBE</h1><h2>${finalTotals.CBE} Birr</h2></div>
-      <div class="cash"><h1>Dube</h1><h2>${finalTotals.Dube} Birr</h2></div>
-      <button id="downloadExcel">📥 Download Excel</button>
-      <button id="downloadWord">📄 Download Word</button>
-    `;
+// Build active in_out entry list
+let inOutDetailsHTML = '<div><h2>Active In/Out</h2></div>';
+Object.values(inOutSnap.val() || {}).forEach(dateGroup => {
+  Object.values(dateGroup).forEach(entry => {
+    if (entry.status === 'active' && !isNaN(entry.amount)) {
+      const amount = (entry.type === 'out' ? '-' : '+') + entry.amount + ' Birr';
+      inOutDetailsHTML += `
+        <div class="cash">
+          ${entry.reason || 'N/A'} --- ${entry.type} --- ${amount}
+        </div>
+      `;
+    }
+  });
+});
+
+containerDiv.innerHTML = `
+  ${inOutDetailsHTML}
+  <div class="cash"><h1>Cash</h1><h2>${finalTotals.Cash} Birr</h2></div>
+  <div class="cash"><h1>Telebirr</h1><h2>${finalTotals.Telebirr} Birr</h2></div>
+  <div class="cash"><h1>CBE</h1><h2>${finalTotals.CBE} Birr</h2></div>
+  <div class="cash"><h1>Dube</h1><h2>${finalTotals.Dube} Birr</h2></div>
+  <button id="downloadExcel">📥 Download Excel</button>
+  <button id="downloadWord">📄 Download Word</button>
+`;
+
     
 
     document.getElementById("downloadExcel").addEventListener("click", async () => {
@@ -786,6 +804,24 @@ showBTNtaju.addEventListener('click', () => {
     
       // Step 3: Totals Row
       const uniqueRooms = new Set();
+      // 🔁 Gather all active in_out records
+const activeInOutRows = [];
+Object.values(inOutSnap.val() || {}).forEach(dateGroup => {
+  Object.values(dateGroup).forEach(entry => {
+    if (entry.status === 'active' && !isNaN(entry.amount)) {
+      const amount = (entry.type === 'out' ? '-' : '+') + entry.amount + ' Birr';
+      activeInOutRows.push([
+        entry.reason || 'N/A',
+        entry.type,
+        amount,
+        entry.paymentMethod || '',
+        '',
+        ''
+      ]);
+    }
+  });
+});
+
       const final = finalTotals;
       allData.forEach(item => {
         if (item.Room && item.Room !== "N/A") {
@@ -817,10 +853,14 @@ showBTNtaju.addEventListener('click', () => {
         ...headers,
         ...paymentRows,
         [],
+        ["Active In/Out Records"],
+        ...activeInOutRows,
+        [],
         ...totalRow,
         [],
         signatureRow
       ];
+      
       const ws = XLSX.utils.aoa_to_sheet(wsData);
     
       const range = XLSX.utils.decode_range(ws['!ref']);
