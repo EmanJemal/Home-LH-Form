@@ -235,104 +235,102 @@ submitButton.addEventListener('click', async() => {
     showRemovePopup(userData);
 
 
-    document.getElementById('confirmRemoveBtn').addEventListener('click', ()=>{
-
-
-            
-            const userRef = ref(database, `customers/${customerId}`);
-            
-            const timestamp = Date.now();
-        // Create a Date object
-            const date = new Date(timestamp);
-
-            // Convert to Ethiopian time (UTC+3)
-            const options = {
-                timeZone: 'Africa/Addis_Ababa',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            };
-
-            // Format the date to Ethiopian time
-            const ethiopianTime = new Intl.DateTimeFormat('en-US', options).format(date);
-
-            let selectedRoom = null;
-            ['floor1', 'floor2', 'floor3', 'floor4'].forEach(floor => {
-                const checkedRoom = document.querySelector(`input[name="${floor}"]:checked`);
-                if (checkedRoom) selectedRoom = checkedRoom.value;
+    document.getElementById('confirmRemoveBtn').addEventListener('click', () => {
+        const confirmBtn = document.getElementById('confirmRemoveBtn');
+        confirmBtn.disabled = true;
+        const originalText = confirmBtn.textContent;
+        confirmBtn.textContent = "Confirming...";
+    
+        const userRef = ref(database, `customers/${customerId}`);
+        const timestamp = Date.now();
+        const date = new Date(timestamp);
+    
+        const options = {
+            timeZone: 'Africa/Addis_Ababa',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        };
+    
+        const ethiopianTime = new Intl.DateTimeFormat('en-US', options).format(date);
+    
+        let selectedRoom = null;
+        ['floor1', 'floor2', 'floor3', 'floor4'].forEach(floor => {
+            const checkedRoom = document.querySelector(`input[name="${floor}"]:checked`);
+            if (checkedRoom) selectedRoom = checkedRoom.value;
+        });
+    
+        if (selectedRoom && selectedRoom !== 'No room selected') {
+            const roomRef = ref(database, `rooms/${selectedRoom}`);
+            get(roomRef).then(snapshot => {
+                if (snapshot.exists() && snapshot.val() === 'booked') {
+                    alert("⛔ This room was just booked by someone else. Please choose another.");
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = originalText;
+                    return;
+                }
+    
+                updateRoomStatus(selectedRoom);
+    
+                set(userRef, userData)
+                    .then(() => {
+                        alert('Customer information submitted successfully!');
+                        location.reload();
+                        document.querySelectorAll('input').forEach(input => input.value = '');
+                        document.querySelector('#sex-options').value = 'male';
+                    })
+                    .catch((error) => {
+                        console.error('Error saving data: ', error);
+                        alert('Failed to submit customer information!');
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = originalText;
+                    });
+    
+                const amtRef = ref(database, `Payments/${customerId}`);
+                set(amtRef, paymentData)
+                    .then(() => {
+                        console.log('Payment data successfully saved!');
+                    })
+                    .catch((error) => {
+                        console.error('Error saving payment data:', error);
+                        alert('Failed to submit customer payment information!');
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = originalText;
+                    });
+    
+            }).catch(error => {
+                console.error('Error checking room status:', error);
+                alert('Failed to verify room status. Please try again.');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = originalText;
             });
-        
-            if (selectedRoom && selectedRoom !== 'No room selected') {
-                const roomRef = ref(database, `rooms/${selectedRoom}`);
-                get(roomRef).then(snapshot => {
-                    if (snapshot.exists() && snapshot.val() === 'booked') {
-                        alert("⛔ This room was just booked by someone else. Please choose another.");
-                        return;
-                    }
-            
-                    // Room is not booked, proceed with saving
-                    updateRoomStatus(selectedRoom);
-            
-                    set(userRef, userData)
-                        .then(() => {
-                            alert('Customer information submitted successfully!');
-                            location.reload();
-                            document.querySelectorAll('input').forEach(input => input.value = '');
-                            document.querySelector('#sex-options').value = 'male';
-                        })
-                        .catch((error) => {
-                            console.error('Error saving data: ', error);
-                            alert('Failed to submit customer information!');
-                        });
-            
-                    const amtRef = ref(database, `Payments/${customerId}`);
-                    set(amtRef, paymentData)
-                        .then(() => {
-                            console.log('Payment data successfully saved!');
-                        })
-                        .catch((error) => {
-                            console.error('Error saving payment data:', error);
-                            alert('Failed to submit customer payment information!');
-                        });
-            
-                }).catch(error => {
-                    console.error('Error checking room status:', error);
-                    alert('Failed to verify room status. Please try again.');
-                });
-            }
-            
-
-            
-
-
-            // Function to generate a 7-digit random number
-            function generateRandomKey() {
-                return Math.floor(1000000000 + Math.random() * 90000000000); // Generates a 7-digit random number
-            }
-
-            const randomKey = generateRandomKey(); // Generate a unique 7-digit random number
-
-            // Reference to the Payments node in the database
-            const paymentRef = ref(database, 'Payments');
-
-            // Create a reference for the new payment entry with the 7-digit random key
-            const amtRef = ref(database, `Payments/${customerId}`);
-
-            set(amtRef, paymentData)
-                .then(() => {
-                    console.log('Payment data successfully saved!');
-                })
-                .catch((error) => {
-                    console.error('Error saving data: ', error);
-                    alert('Failed to submit customer payment information!');
-                });
-
-
+        }
+    
+        // 7-digit random key generation and duplicate payment set (kept as-is)
+        function generateRandomKey() {
+            return Math.floor(1000000000 + Math.random() * 90000000000);
+        }
+    
+        const randomKey = generateRandomKey();
+        const paymentRef = ref(database, 'Payments');
+        const amtRef = ref(database, `Payments/${customerId}`);
+    
+        set(amtRef, paymentData)
+            .then(() => {
+                console.log('Payment data successfully saved!');
+            })
+            .catch((error) => {
+                console.error('Error saving data: ', error);
+                alert('Failed to submit customer payment information!');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = originalText;
+            });
     });
+    
 
 });
 
