@@ -197,7 +197,14 @@ onValue(paymentsRef, (snapshot) => {
             const method = (payment.paymentMethod || '').toLowerCase();
 
             const paymentDate = parseCustomTimestamp(rawTimestamp);
-
+            console.log('Timestamp:', rawTimestamp);
+            console.log('Parsed:', paymentDate);
+            console.log('Month Match:', 
+                paymentDate && 
+                paymentDate.getFullYear() === currentYear &&
+                paymentDate.getMonth() + 1 === currentMonth
+            );
+            
             if (
                 paymentDate &&
                 paymentDate.getFullYear() === currentYear &&
@@ -228,8 +235,12 @@ onValue(paymentsRef, (snapshot) => {
 });
 
 
+function parseCustomTimestampcbe(timestamp) {
+    if (!timestamp || typeof timestamp !== "string") {
+        console.warn("⛔ Invalid or missing timestamp:", timestamp);
+        return null;
+    }
 
-function parseCustomTimestamp(timestamp) {
     const regex = /([a-zA-Z]+) (\d{1,2}), (\d{4}) at (\d{1,2}):(\d{2}):(\d{2}) (AM|PM)/;
     const match = timestamp.match(regex);
 
@@ -240,17 +251,110 @@ function parseCustomTimestamp(timestamp) {
         let hour = parseInt(match[4], 10);
         const minute = parseInt(match[5], 10);
         const second = parseInt(match[6], 10);
-        const period = match[7]; // AM or PM
+        const period = match[7];
 
         if (period === 'PM' && hour < 12) hour += 12;
         if (period === 'AM' && hour === 12) hour = 0;
 
-        const month = new Date(Date.parse(`${monthStr} 1, 2024`)).getMonth(); 
+        const month = new Date(Date.parse(`${monthStr} 1, 2000`)).getMonth(); 
         return new Date(year, month, day, hour, minute, second);
-    } else {
-        console.error('Invalid timestamp format:', timestamp);
     }
+
+    console.error('❌ Timestamp did not match expected format:', timestamp);
+    return null;
+    }
+
+
+onValue(paymentsRef, (snapshot) => {
+    if (!monthlyRevenueElement) {
+        console.error("❌ Could not find .monthly-values element.");
+        return;
+    }
+
+    if (snapshot.exists()) {
+        const paymentsData = snapshot.val();
+
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth() + 1;
+
+        let total = 0;
+        let byMethod = {
+            Cash: 0,
+            Telebirr: 0,
+            CBE: 0,
+            Dube: 0
+        };
+
+        for (const id in paymentsData) {
+            const payment = paymentsData[id];
+            const rawTimestamp = payment.timestamp;
+            const method = (payment.paymentMethod || '').toLowerCase();
+            const amount = parseFloat(payment.amountInBirr);
+
+            const paymentDate = parseCustomTimestampcbe(rawTimestamp);
+
+            if (
+                paymentDate &&
+                paymentDate.getFullYear() === currentYear &&
+                paymentDate.getMonth() + 1 === currentMonth &&
+                !isNaN(amount)
+            ) {
+                total += amount;
+
+                if (method.includes("cash")) byMethod.Cash += amount;
+                else if (method.includes("telebirr")) byMethod.Telebirr += amount;
+                else if (method.includes("cbe")) byMethod.CBE += amount;
+                else if (method.includes("dube") || method.includes("debtors")) byMethod.Dube += amount;
+            }
+        }
+
+        console.log("✅ Monthly Revenue Totals:", byMethod);
+
+        monthlyRevenueElement.innerHTML = `
+            <div><strong>Cash:</strong> ${byMethod.Cash.toLocaleString()} Birr</div>
+            <div><strong>Telebirr:</strong> ${byMethod.Telebirr.toLocaleString()} Birr</div>
+            <div><strong>CBE:</strong> ${byMethod.CBE.toLocaleString()} Birr</div>
+            <div><strong>Dube:</strong> ${byMethod.Dube.toLocaleString()} Birr</div>
+            <div><strong>Total:</strong> ${total.toLocaleString()} Birr</div>
+        `;
+    } else {
+        console.warn("⚠️ No payment data for the month.");
+        monthlyRevenueElement.innerText = '0 Birr';
+    }
+}, (err) => {
+    console.error("❌ Error fetching monthly payments:", err);
+    monthlyRevenueElement.innerText = 'Error';
+});
+
+
+function parseCustomTimestamp(timestamp) {
+    if (!timestamp) return null;
+
+    // If it's a number (e.g., UNIX ms)
+    if (typeof timestamp === 'number') {
+        return new Date(timestamp);
+    }
+
+    // If it's a Firebase string like "July 29, 2025 at 2:32:00 PM"
+    const regex = /([a-zA-Z]+) (\d{1,2}), (\d{4}) at (\d{1,2}):(\d{2}):(\d{2}) (AM|PM)/;
+    const match = String(timestamp).match(regex);
+
+    if (match) {
+        const [_, monthStr, day, year, hourStr, minuteStr, secondStr, period] = match;
+        let hour = parseInt(hourStr);
+        if (period === 'PM' && hour < 12) hour += 12;
+        if (period === 'AM' && hour === 12) hour = 0;
+
+        const month = new Date(Date.parse(`${monthStr} 1, 2000`)).getMonth();
+        return new Date(parseInt(year), month, parseInt(day), hour, parseInt(minuteStr), parseInt(secondStr));
+    }
+
+    // Try fallback
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? null : date;
 }
+
 
 
 
@@ -448,173 +552,261 @@ function formatDate(month, day) {
     return date.toLocaleString('en-US', { month: 'short', day: '2-digit' }); // Example: "Dec 28"
 }
 
-// Loop through each 'day' and add a click event listener
+
 days.forEach(day => {
     day.addEventListener('click', async (event) => {
-        document.querySelector('.rooms').innerHTML = '';
+        const roomsContainer = document.querySelector('.rooms');
+        roomsContainer.innerHTML = ''; // Clear previous
 
-        // Get the clicked day (the second <h2> element inside the clicked day div)
+        // Get clicked Gregorian date
         const dayNumber = event.target.closest('.day').querySelector('h2:nth-of-type(2)').textContent;
-        const month = event.target.closest('.day').querySelector('h2:nth-of-type(1)').textContent;
+        const monthStr = event.target.closest('.day').querySelector('h2:nth-of-type(1)').textContent;
+        const selectedGregorian = new Date(`${monthStr} ${dayNumber}, ${new Date().getFullYear()} 12:00:00`);
+        if (isNaN(selectedGregorian)) return console.warn("Invalid Gregorian date");
 
-        // Display the month and day number (you can use this data as needed)
-        console.log(`You clicked: ${month} ${dayNumber}`);
+        const gcString = selectedGregorian.toISOString().split('T')[0];
 
-        // Format the selected date
-        const selectedDateFormatted = `${month} ${dayNumber}`;
+        // Convert to Ethiopian date
+        const ecRes = await fetch(`https://api.ethioall.com/convert/api?gc=${gcString}`);
+        const ecData = await ecRes.json();
+        const clickedEC = `${ecData[0].year}-${String(ecData[0].month).padStart(2, '0')}-${String(ecData[0].day).padStart(2, '0')}`;
+        console.log(`📅 EC Clicked: ${clickedEC}`);
 
-        // Fetch the Payments data from Firebase
-        const paymentsRef = ref(database, 'Payments');
-        const snapshot = await get(paymentsRef);
+        // Fetch Firebase data
+        const [paymentsSnap, timersSnap] = await Promise.all([
+            get(ref(database, 'Payments')),
+            get(ref(database, 'timer_id_ver'))
+        ]);
 
-        if (snapshot.exists()) {
-            // Loop through all payment entries and check if the timestamp matches the selected date
-            const payments = snapshot.val();
-            const matchingPayments = [];
+        if (!paymentsSnap.exists()) return console.log("No payments data");
+        if (!timersSnap.exists()) return console.log("No timer data");
 
-            for (const paymentId in payments) {
-                const payment = payments[paymentId];
-                const paymentTimestamp = payment.timestamp // Convert timestamp to Date object
-                const formattedPaymentDate = paymentTimestamp.toLocaleString('en-US', { month: 'short', day: '2-digit' });
-                
-                
+        const payments = paymentsSnap.val();
+        const timerData = timersSnap.val();
 
-                // Remove the time part to avoid the invalid date error
-                const cleanedDateStr = formattedPaymentDate.split(' at ')[0];
-
-                // Create a Date object from the cleaned string
-                const date = new Date(cleanedDateStr);
-
-                const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-
-
-                if (formattedDate === selectedDateFormatted) {
-                    matchingPayments.push(payment); // Store matching payments
-                }
-
+        // Match payments by clicked Gregorian date
+        const matchingPayments = [];
+        for (const id in payments) {
+            const payment = payments[id];
+            const parsed = parseCustomTimestamp(payment.timestamp);
+            if (parsed && parsed.toDateString() === selectedGregorian.toDateString()) {
+                matchingPayments.push(payment);
             }
-
-            if (matchingPayments.length > 0) {
-
-                    matchingPayments.forEach((payment)=>{
-                        console.log(payment);
-                        
-                        const HTML = `
-                                <div class="room">
-                                    <h1 class="room-no">Room ${payment.selectedRoom}</h1>
-                                    <h3>${payment.name}</h3>
-                                    <h3 class="date">${payment.timestamp}</h3>
-                                    <p><strong> Sex:</strong><strong class="color-blue"> ${payment.sex}</strong></p>
-                                    <p><strong> Original Length of stay:</strong> <strong class="color-blue">${payment.days} Days</strong></p>
-                                    <p><strong> Payment Method:</strong><strong class="color-blue"> ${payment.paymentMethod}</strong></p>
-                                    <p><strong> Amount:</strong> <strong class="color-blue">${payment.amountInBirr} Birr</strong></p>
-                                    <p><strong> Registration by:</strong> <strong class="color-blue">${payment.salesname}</strong></p>
-                                    <p><strong> Phone:</strong><strong class="color-blue"> ${payment.phone}</strong></p>
-
-                                </div>`;
-                        document.querySelector('.rooms').innerHTML += HTML
-
-                    });
-                    
-            } else {
-                console.log('No payments found for this day');
-            }
-        } else {
-            console.log('No payments data available');
         }
 
-        // Add a selected class to highlight the clicked day
-        days.forEach(d => d.classList.remove('selected')); // Remove previous selections
-        event.target.closest('.day').classList.add('selected'); // Add selected class to the clicked day
+        // Build timer summary
+        const timerSummary = {};
+        for (const payment of matchingPayments) {
+            const { timeid, amountInBirr, paymentMethod } = payment;
+            if (!timeid) continue;
+
+            const method = (paymentMethod || '').toLowerCase();
+            const amount = parseFloat(amountInBirr);
+            if (isNaN(amount)) continue;
+
+            if (!timerSummary[timeid]) {
+                timerSummary[timeid] = {
+                    CBE: 0,
+                    Cash: 0,
+                    Telebirr: 0,
+                    Dube: 0,
+                    total: 0,
+                    salesname: timerData[timeid]?.salesname || 'Unknown',
+                    ecMatch: false
+                };
+            }
+
+            if (method.includes('cash')) timerSummary[timeid].Cash += amount;
+            else if (method.includes('telebirr')) timerSummary[timeid].Telebirr += amount;
+            else if (method.includes('cbe')) timerSummary[timeid].CBE += amount;
+            else if (method.includes('dube') || method.includes('debtors')) timerSummary[timeid].Dube += amount;
+
+            timerSummary[timeid].total += amount;
+        }
+
+        // Convert all timer_id timestamps to EC and check match
+        const ecTimerChecks = await Promise.all(Object.entries(timerData).map(async ([tid, data]) => {
+            if (!data.time) return null;
+            const timerDate = new Date(data.time);
+            const gcStr = timerDate.toISOString().split('T')[0];
+
+            try {
+                const res = await fetch(`https://api.ethioall.com/convert/api?gc=${gcStr}`);
+                const json = await res.json();
+                const ecDate = `${json[0].year}-${String(json[0].month).padStart(2, '0')}-${String(json[0].day).padStart(2, '0')}`;
+                return { timeid: tid, ecDate };
+            } catch (err) {
+                console.warn("⛔ EC conversion failed for timer", tid, err);
+                return null;
+            }
+        }));
+
+        ecTimerChecks
+            .filter(Boolean)
+            .forEach(({ timeid, ecDate }) => {
+                if (ecDate === clickedEC && timerSummary[timeid]) {
+                    timerSummary[timeid].ecMatch = true;
+                }
+            });
+
+        // ⬆️ Add timer summaries FIRST
+        const summaryBox = document.createElement('div');
+        summaryBox.className = 'timer-summary';
+        summaryBox.innerHTML = `<h2 style="margin-bottom:10px">🧾 Timer Summary</h2>`;
+
+        for (const [timeid, info] of Object.entries(timerSummary)) {
+            if (!info.ecMatch) continue;
+
+            summaryBox.innerHTML += `
+                <div class="timer-box">
+                    <h3>🆔 ${timeid}</h3>
+                    <p><strong>👤 Salesname:</strong> ${info.salesname}</p>
+                    <p><strong>🏦 CBE:</strong> ${info.CBE.toLocaleString()} Birr</p>
+                    <p><strong>📱 Telebirr:</strong> ${info.Telebirr.toLocaleString()} Birr</p>
+                    <p><strong>💵 Cash:</strong> ${info.Cash.toLocaleString()} Birr</p>
+                    <p><strong>📒 Dube:</strong> ${info.Dube.toLocaleString()} Birr</p>
+                    <p><strong style="color:green">Total:</strong> <strong style="color:green">${info.total.toLocaleString()} Birr</strong></p>
+                </div>
+            `;
+        }
+
+        roomsContainer.appendChild(summaryBox); // Add summary at the top
+        // 💰 Compute grand total for the day
+        let dailyTotal = 0;
+        for (const [timeid, info] of Object.entries(timerSummary)) {
+            if (info.ecMatch) {
+                dailyTotal += info.total;
+            }
+        }
+
+        // 🧾 Display daily total summary box
+        const dailySummary = document.createElement('div');
+        dailySummary.className = 'daily-total-summary';
+        dailySummary.innerHTML = `
+            <div class="daily-summary-box" style="background:#f5f5f5;padding:10px;border-radius:8px;margin-bottom:15px;border:1px solid #ccc">
+                <h2 style="margin:0;font-size:1.2em;">📊 Total Income for ${clickedEC}</h2>
+                <p style="font-weight:bold;font-size:1.5em;color:green;margin:5px 0;">${dailyTotal.toLocaleString()} Birr</p>
+            </div>
+        `;
+        roomsContainer.appendChild(dailySummary); // Add daily total first
+// 🗂️ Fetch and summarize from /excel_register/{ec_date}
+const excelRef = ref(database, `excel_register/${clickedEC}`);
+const excelSnap = await get(excelRef);
+
+if (excelSnap.exists()) {
+    const excelData = excelSnap.val();
+    const categoryTotals = {};
+    let excelGrandTotal = 0;
+    
+    for (const itemId in excelData) {
+        const entry = excelData[itemId];
+        const cat = (entry.category || 'Other').toUpperCase();
+        const amount = parseFloat(entry.grandPrice);
+        if (isNaN(amount)) continue;
+
+        if (!categoryTotals[cat]) categoryTotals[cat] = 0;
+        categoryTotals[cat] += amount;
+        excelGrandTotal += amount;
+        
+    }
+
+    // 🧾 Display Excel Register Summary
+    const excelSummaryBox = document.createElement('div');
+    excelSummaryBox.className = 'excel-summary';
+    excelSummaryBox.innerHTML = `
+    <div class="excel-summary-box" style="background:#fff7e6;padding:10px;border-radius:8px;margin-bottom:15px;border:1px solid #ddd">
+        <h2 style="margin:0;font-size:1.2em;">📦 Services Summary (From /excel_register)</h2>
+        ${Object.entries(categoryTotals).map(([cat, val]) => `
+            <p><strong>${cat}:</strong> ${val.toLocaleString()} Birr</p>
+        `).join('')}
+        <p style="margin-top:10px;font-weight:bold;color:green;">💰 Grand Total: ${excelGrandTotal.toLocaleString()} Birr</p>
+    </div>
+`;
+
+    roomsContainer.appendChild(excelSummaryBox);
+}
+
+        // Then display matching room entries
+        matchingPayments.forEach(payment => {
+            const HTML = `
+                <div class="room">
+                    <h1 class="room-no">Room ${payment.selectedRoom}</h1>
+                    <h3>${payment.name}</h3>
+                    <h3 class="date">${payment.timestamp}</h3>
+                    <p><strong> Sex:</strong><strong class="color-blue"> ${payment.sex}</strong></p>
+                    <p><strong> Original Length of stay:</strong> <strong class="color-blue">${payment.days} Days</strong></p>
+                    <p><strong> Payment Method:</strong><strong class="color-blue"> ${payment.paymentMethod}</strong></p>
+                    <p><strong> Amount:</strong> <strong class="color-blue">${payment.amountInBirr} Birr</strong></p>
+                    <p><strong> Registration by:</strong> <strong class="color-blue">${payment.salesname}</strong></p>
+                    <p><strong> Phone:</strong><strong class="color-blue"> ${payment.phone}</strong></p>
+                </div>`;
+            roomsContainer.innerHTML += HTML;
+        });
+
+        // Highlight selected day
+        days.forEach(d => d.classList.remove('selected'));
+        event.target.closest('.day').classList.add('selected');
     });
 });
 
 
-const selectedDate = document.querySelector('.free-hand-date')
 
+
+
+const selectedDate = document.querySelector('.free-hand-date')
 
 selectedDate.addEventListener('change', async (event) => {
     document.querySelector('.rooms').innerHTML = '';
 
-    // Get the clicked day (the second <h2> element inside the clicked day div)
-    const selectedDateValue = selectedDate.value;
+    const selectedDateValue = selectedDate.value; // e.g., "2025-07-29"
+    const selectedDateObj = new Date(selectedDateValue);
 
-    // Create a Date object from the string
-    const date = new Date(selectedDateValue);
+    if (isNaN(selectedDateObj)) {
+        console.warn("❌ Invalid selected date");
+        return;
+    }
 
+    const selectedDateString = selectedDateObj.toDateString(); // e.g., "Tue Jul 29 2025"
 
-    // Subtract days dynamically (e.g., go back 3 days to reach Dec 31)
-    date.setDate(date.getDate());
-
-    // Format as "Dec 31"
-    const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-
-    console.log(formattedDate); 
-
-
-    // Format the selected date
-    const selectedDateFormatted = formattedDate;
-
-    // Fetch the Payments data from Firebase
     const paymentsRef = ref(database, 'Payments');
     const snapshot = await get(paymentsRef);
 
-    if (snapshot.exists()) {
-        // Loop through all payment entries and check if the timestamp matches the selected date
-        const payments = snapshot.val();
-        const matchingPayments = [];
-
-        for (const paymentId in payments) {
-            const payment = payments[paymentId];
-            const paymentTimestamp = payment.timestamp // Convert timestamp to Date object
-            const formattedPaymentDate = paymentTimestamp.toLocaleString('en-US', { month: 'short', day: '2-digit' });
-            
-            
-
-            // Remove the time part to avoid the invalid date error
-            const cleanedDateStr = formattedPaymentDate.split(' at ')[0];
-
-            // Create a Date object from the cleaned string
-            const date = new Date(cleanedDateStr);
-
-            const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-
-
-            if (formattedDate === selectedDateFormatted) {
-                matchingPayments.push(payment); // Store matching payments
-            }
-
-        }
-
-        if (matchingPayments.length > 0) {
-
-                matchingPayments.forEach((payment)=>{
-                    console.log(payment);
-                    
-                    const HTML = `
-                            <div class="room">
-                                <h1 class="room-no">Room ${payment.selectedRoom}</h1>
-                                <h3>${payment.name}</h3>
-                                <h3 class="date">${payment.timestamp}</h3>
-                                <p><strong> Sex:</strong><strong class="color-blue"> ${payment.sex}</strong></p>
-                                <p><strong> Original Length of stay:</strong> <strong class="color-blue">${payment.days} Days</strong></p>
-                                <p><strong> How many days left:</strong> <strong class="color-blue">3 Days</strong></p>
-                                <p><strong> Registration by:</strong> <strong class="color-blue">Arafat</strong></p>
-                            </div>`;
-                    document.querySelector('.rooms').innerHTML += HTML
-
-                });
-                
-        } else {
-            console.log('No payments found for this day');
-        }
-    } else {
+    if (!snapshot.exists()) {
         console.log('No payments data available');
+        return;
     }
 
+    const payments = snapshot.val();
+    const matchingPayments = [];
+
+    for (const paymentId in payments) {
+        const payment = payments[paymentId];
+
+        const paymentDateObj = parseCustomTimestamp(payment.timestamp);
+        if (!paymentDateObj) continue;
+
+        if (paymentDateObj.toDateString() === selectedDateString) {
+            matchingPayments.push(payment);
+        }
+    }
+
+    if (matchingPayments.length > 0) {
+        matchingPayments.forEach((payment) => {
+            const HTML = `
+                <div class="room">
+                    <h1 class="room-no">Room ${payment.selectedRoom}</h1>
+                    <h3>${payment.name}</h3>
+                    <h3 class="date">${payment.timestamp}</h3>
+                    <p><strong> Sex:</strong><strong class="color-blue"> ${payment.sex}</strong></p>
+                    <p><strong> Original Length of stay:</strong> <strong class="color-blue">${payment.days} Days</strong></p>
+                    <p><strong> Payment Method:</strong><strong class="color-blue"> ${payment.paymentMethod}</strong></p>
+                    <p><strong> Amount:</strong> <strong class="color-blue">${payment.amountInBirr} Birr</strong></p>
+                    <p><strong> Registration by:</strong> <strong class="color-blue">${payment.salesname}</strong></p>
+                    <p><strong> Phone:</strong><strong class="color-blue"> ${payment.phone}</strong></p>
+                </div>`;
+            document.querySelector('.rooms').innerHTML += HTML;
+        });
+    } else {
+        console.log('No payments found for selected date');
+    }
 });
-
-

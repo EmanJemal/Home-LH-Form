@@ -18,61 +18,47 @@ function loadCustomers() {
 
                 snapshot.forEach((childSnapshot) => {
                     const customer = childSnapshot.val();
-                    const paymentMethod = customer.paymentMethod; 
-                    
+                    const paymentMethod = customer.paymentMethod;
+
                     // ✅ Only proceed if the payment method is 'debtors'
                     if (paymentMethod?.toLowerCase() !== 'debtors') {
                         return;
-                    }                    
-                
+                    }
+
                     const roomNumber = customer.selectedRoom;
                     const days = customer.days;
                     const amountInBirr = customer.amountInBirr;
-                    const finalDate = customer.finalDate;
-                    const timeOnly = finalDate.split('2024-')[1];
-                    const startingDate = customer.timestamp;                 
+                    const startingDate = customer.timestamp;
                     const customerName = customer.name;
-                    const customerId = childSnapshot.key; // Get the customer ID
-                
-                    const dateAndTime = finalDate.split('T');
-                    const date = dateAndTime[0]; // '2024-12-29'
-                    const time = dateAndTime[1]; // '11:30'
-                
-                    // Split the date further to get the month and day
-                    const dateParts = date.split('-');
-                    const year = dateParts[0]; // '2024'
-                    const month = dateParts[1]; // '12'
-                    const day = dateParts[2]; // '29'
-                
-                    // Display the formatted result
-                    const formattedDate = `${month}-${day} <i class="fa-solid fa-arrow-right"></i> ${time}`;
-                                                    
+                    const customerId = childSnapshot.key;
+
                     let floor;
-                
+
                     // Determine the floor based on room number
-                    if (roomNumber.startsWith('1')) floor = '.debtors-list .floor-one-list ul';
-                    else if (roomNumber.startsWith('2')) floor = '.debtors-list .floor-two-list ul';
-                    else if (roomNumber.startsWith('3')) floor = '.debtors-list .floor-three-list ul';
-                    else if (roomNumber.startsWith('4')) floor = '.debtors-list .floor-four-list ul';
-                
+                    if (roomNumber?.startsWith('1')) floor = '.debtors-list .floor-one-list ul';
+                    else if (roomNumber?.startsWith('2')) floor = '.debtors-list .floor-two-list ul';
+                    else if (roomNumber?.startsWith('3')) floor = '.debtors-list .floor-three-list ul';
+                    else if (roomNumber?.startsWith('4')) floor = '.debtors-list .floor-four-list ul';
+
                     const floorElement = document.querySelector(floor);
-                
+
                     if (floorElement) {
                         const listItem = document.createElement('li');
                         listItem.innerHTML = `
-                            ${roomNumber} <i class="fa-solid fa-arrow-right"></i> ${customerName}<i class="fa-solid fa-arrow-right fa-arrow-margin"></i>${days} Days
-                            <i class="fa-solid fa-arrow-right"></i> ${paymentMethod}<i class="fa-solid fa-arrow-right fa-arrow-margin"></i>${amountInBirr} Birr
+                            ${roomNumber} <i class="fa-solid fa-arrow-right"></i> ${customerName}
+                            <i class="fa-solid fa-arrow-right fa-arrow-margin"></i>${days} Days
+                            <i class="fa-solid fa-arrow-right"></i> ${paymentMethod}
+                            <i class="fa-solid fa-arrow-right fa-arrow-margin"></i>${amountInBirr} Birr
                             <span class="user-leaved"><i class="fa-solid fa-check"></i></span>
                         `;
                         floorElement.appendChild(listItem);
-                
+
                         // Add event listener to the icon for showing the modal
                         listItem.querySelector('.user-leaved').addEventListener('click', () => {
                             showRemovePopup(customerId, roomNumber); // Pass roomNumber here
                         });
                     }
                 });
-                
 
             } else {
                 console.log('No customers found.');
@@ -85,7 +71,6 @@ function loadCustomers() {
 
 // Load customers on page load
 window.onload = loadCustomers;
-
 
 document.querySelector('.fa-check')
     .addEventListener('click', ()=>{
