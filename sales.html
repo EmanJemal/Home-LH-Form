@@ -722,8 +722,9 @@ li h4{
           const tbody = document.getElementById('excelRows');
           const row = document.createElement('tr');
           const inputs = [
-            { type: 'text', placeholder: 'Category' },
-            { type: 'date' },
+          { type: 'text', placeholder: 'Category' },
+          { type: 'text', placeholder: 'Description' },
+          { type: 'date' },
             { type: 'text', placeholder: 'UOM' },
             { type: 'number', placeholder: 'Qty', oninput: 'recalculate(this)' },
             { type: 'number', placeholder: 'Unit', oninput: 'recalculate(this)' },
