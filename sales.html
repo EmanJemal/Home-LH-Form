@@ -375,7 +375,83 @@ li h4{
     height: 50px;
     animation: spin 1s linear infinite;
 }
+.excel-existing {
+  width: 95%;
+  margin: 40px auto;
+}
 
+.excel-existing .container {
+  margin-bottom: 30px;
+}
+
+.excel-existing table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.excel-existing th,
+.excel-existing td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+.excel-table-container {
+  margin: 40px;
+  width: 95%;
+}
+.excel-table-exist {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+.excel-table-exist th, .excel-table-exist td {
+  border: 1px solid #999;
+  padding: 8px 10px;
+  text-align: center;
+}
+.excel-table-exist th {
+  background-color: #f8a13e;
+  color: white;
+}
+.excel-table-exist tr:nth-child(even) {
+  background-color: #f5f5f5;
+}
+#excel-display {
+  margin-top: 40px;
+  clear: both;
+}
+#excel-display::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+.export-btn-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  margin-right: 40px;
+}
+
+#exportExcelBtn-excel {
+  padding: 10px 20px;
+  background-color: #fc6b13;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+  margin-bottom: 60px;
+}
+
+#exportExcelBtn-excel:hover {
+  background-color: white;
+  color: #fc6b13;
+  border: 2px solid #fc6b13;
+}
+#submitExcelBtn{
+    margin-left: 10px;
+}
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -514,6 +590,7 @@ li h4{
                 <input type="number" placeholder="room" class="name-of-customer name-customer">
             </div>
 
+
             <div class="Restaurant-lable">
                 <h3 class="lable">Restaurant</h1>
                 <input type="number" placeholder="Restaurant" class="name-of-customer name-customer">
@@ -541,8 +618,49 @@ li h4{
     <div class="submission-btn">
         <button id="submit-btn">Submit</button>
     </div>
-
-
+    <div class="excel-style-container">
+        <h1>Excel Style Entry</h1>
+        <table class="excel-table">
+          <thead>
+            <tr>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Date</th>
+              <th>UOM</th>
+              <th>Quantity</th>
+              <th>Unit Price</th>
+              <th>Total Price</th>
+              <th>Add</th>
+              <th>Discount</th>
+              <th>Tax</th>
+              <th>Grand Price</th>
+            </tr>
+          </thead>
+          <tbody id="excelRows">
+            <!-- 3 Default Rows -->
+            <tr>
+                <td><input type="text" placeholder="Category"></td>
+                <td><input type="text" placeholder="Description"></td>
+                <td><input type="date"></td>
+              <td><input type="text" placeholder="UOM"></td>
+              <td><input type="number" placeholder="Qty" oninput="recalculate(this)"></td>
+              <td><input type="number" placeholder="Unit" oninput="recalculate(this)"></td>
+              <td><input type="number" placeholder="Total" readonly></td>
+              <td><input type="number" placeholder="Add" oninput="recalculate(this)"></td>
+              <td><input type="number" placeholder="Discount" oninput="recalculate(this)"></td>
+              <td><input type="number" placeholder="Tax" oninput="recalculate(this)"></td>
+              <td><input type="number" placeholder="Grand" readonly></td>
+            </tr>
+            <!-- Repeat 2 more similar rows -->
+          </tbody>
+        </table>
+        <div class="submission-btn">
+          <button onclick="addExcelRow()">➕ Add Row</button>
+          <button id="submitExcelBtn">Submit Excel</button>
+        </div>
+      </div>
+      
+  
 
     <div class="container" id="existing-orders">
         <!-- Existing order groups (ASTU etc) will be inserted here -->
@@ -582,8 +700,104 @@ li h4{
           <div id="receiptContent"></div>
         </div>
       </div>
-    
+      <div style="margin-bottom: 10px;">
+        <label for="excelDate"><strong>📅 Select Date:</strong></label>
+        <input type="date" id="excelDate" />
+        <button id="loadExcelBtn">Load Sales</button>
+      </div>
+      
+      <div id="excel-display" class="excel-table-container">
+        
+      </div>
+
+      <div class="export-btn-container">
+        <button id="exportExcelBtn-excel">📤 Export to Excel</button>
+      </div>
+      
+      <script src="https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 
     <script type="module" src="sales/sales.js"></script>
+    <script>
+        function addExcelRow() {
+          const tbody = document.getElementById('excelRows');
+          const row = document.createElement('tr');
+          const inputs = [
+            { type: 'text', placeholder: 'Category' },
+            { type: 'date' },
+            { type: 'text', placeholder: 'UOM' },
+            { type: 'number', placeholder: 'Qty', oninput: 'recalculate(this)' },
+            { type: 'number', placeholder: 'Unit', oninput: 'recalculate(this)' },
+            { type: 'number', placeholder: 'Total', readonly: true },
+            { type: 'number', placeholder: 'Add', oninput: 'recalculate(this)' },
+            { type: 'number', placeholder: 'Discount', oninput: 'recalculate(this)' },
+            { type: 'number', placeholder: 'Tax', oninput: 'recalculate(this)' },
+            { type: 'number', placeholder: 'Grand', readonly: true }
+          ];
+        
+          inputs.forEach(config => {
+            const td = document.createElement('td');
+            const input = document.createElement('input');
+            input.type = config.type;
+            input.placeholder = config.placeholder || '';
+            if (config.readonly) input.readOnly = true;
+            if (config.oninput) input.setAttribute('oninput', config.oninput);
+            td.appendChild(input);
+            row.appendChild(td);
+          });
+        
+          tbody.appendChild(row);
+        }
+        
+        function recalculate(input) {
+          const row = input.closest('tr');
+          const qty = parseFloat(row.cells[4].querySelector('input').value) || 0;
+          const unit = parseFloat(row.cells[5].querySelector('input').value) || 0;
+          const add = parseFloat(row.cells[7].querySelector('input').value) || 0;
+          const discount = parseFloat(row.cells[8].querySelector('input').value) || 0;
+          const tax = parseFloat(row.cells[9].querySelector('input').value) || 0;
+        
+          const total = qty * unit + add;
+          const grand = total + tax - discount;
+        
+          row.cells[6].querySelector('input').value = total.toFixed(2);
+          row.cells[10].querySelector('input').value = grand.toFixed(2);
+        }
+        
+        function submitExcelData() {
+          const rows = document.querySelectorAll('#excelRows tr');
+          const data = [];
+        
+          rows.forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const rowData = {
+                category: inputs[0].value || '',
+                description: inputs[1].value || '',
+                date: inputs[2].value || '',
+              uom: inputs[3].value || '',
+              quantity: parseFloat(inputs[4].value) || 0,
+              unitPrice: parseFloat(inputs[5].value) || 0,
+              totalPrice: parseFloat(inputs[6].value) || 0,
+              add: parseFloat(inputs[7].value) || 0,
+              discount: parseFloat(inputs[8].value) || 0,
+              tax: parseFloat(inputs[9].value) || 0,
+              grandPrice: parseFloat(inputs[10].value) || 0
+            };
+            data.push(rowData);
+          });
+        
+          console.log('🔄 Submitting Excel Data:', data);
+        
+          // 👉 You can push to Firebase here if needed
+          /*
+          const db = getDatabase();
+          const today = new Date().toISOString().split('T')[0];
+          const refPath = ref(db, `excelEntries/${today}`);
+          push(refPath, data)
+            .then(() => alert("✅ Saved successfully!"))
+            .catch(err => alert("❌ Error saving: " + err));
+          */
+        }
+        </script>
+        
 </body>
 </html>
