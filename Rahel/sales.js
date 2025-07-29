@@ -257,7 +257,7 @@ async function loadExistingOrders() {
             <td>${entry.drink || ''}</td>
             <td>${entry.drinkAmount || 0}</td>
             <td>${entry.Event_Type || ''}</td>
-            <td>${entry.Tax_amount || 0}</td>
+            <td>${entry.Event_amount || 0}</td>
           </tr>
         `;
     }).join('');
