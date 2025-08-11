@@ -986,7 +986,7 @@ bot.onText(/^\/check$/, async (msg) => {
   const chatId = msg.chat.id;
 
   // Only allow main admin or specific person
-  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+  if (!allowedUsers.includes(chatId)) {
     return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
   }
 
