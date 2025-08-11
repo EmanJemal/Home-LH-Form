@@ -1002,14 +1002,14 @@ bot.onText(/^\/check$/, async (msg) => {
     // Compare each record with every other record
     for (let i = 0; i < payments.length; i++) {
       const [id1, p1] = payments[i];
-      if (!p1.timestamp) continue; // Skip if no timestamp
+      if (!p1.timestamp) continue;
     
       const time1 = DateTime.fromFormat(
         p1.timestamp,
         "MMMM d, yyyy 'at' hh:mm:ss a",
         { zone: 'utc' }
       );
-      if (!time1.isValid) continue; // Skip if parsing failed
+      if (!time1.isValid) continue;
     
       for (let j = i + 1; j < payments.length; j++) {
         const [id2, p2] = payments[j];
@@ -1022,12 +1022,20 @@ bot.onText(/^\/check$/, async (msg) => {
         );
         if (!time2.isValid) continue;
     
-        // Compare name + phone
+        // ✅ Check for same name, phone, and room
         if (
           p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase() &&
-          p1.phone?.trim() === p2.phone?.trim()
+          p1.phone?.trim() === p2.phone?.trim() &&
+          p1.selectedRoom?.trim() === p2.selectedRoom?.trim()
         ) {
           const diffMinutes = Math.abs(time1.diff(time2, 'minutes').minutes);
+    
+          // Optional: Only consider within last 2 days
+          const now = DateTime.now().setZone('utc');
+          if (time1 < now.minus({ days: 2 }) || time2 < now.minus({ days: 2 })) {
+            continue; // Skip if older than 2 days
+          }
+    
           if (diffMinutes <= 50) {
             duplicates.push({ id1, id2, p1, p2, diffMinutes });
           }
