@@ -980,3 +980,93 @@ const data = snapshot.val();
 
   bot.sendMessage(chatId, `🕒 Latest 5 Active Timers:\n\n${message}`);
 });
+
+
+bot.onText(/^\/check$/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  // Only allow main admin or specific person
+  if (chatId.toString() !== process.env.Main_ADMIN_CHAT_ID) {
+    return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
+  }
+
+  try {
+    const snapshot = await database.ref('Payments').once('value');
+    if (!snapshot.exists()) {
+      return bot.sendMessage(chatId, "✅ No payments found.");
+    }
+
+    const payments = Object.entries(snapshot.val());
+    const duplicates = [];
+
+    // Compare each record with every other record
+    for (let i = 0; i < payments.length; i++) {
+      const [id1, p1] = payments[i];
+      const time1 = DateTime.fromFormat(p1.timestamp, "MMMM d, yyyy 'at' hh:mm:ss a", { zone: 'utc' });
+      
+      for (let j = i + 1; j < payments.length; j++) {
+        const [id2, p2] = payments[j];
+        if (p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase() &&
+            p1.phone?.trim() === p2.phone?.trim()) {
+
+          const time2 = DateTime.fromFormat(p2.timestamp, "MMMM d, yyyy 'at' hh:mm:ss a", { zone: 'utc' });
+          const diffMinutes = Math.abs(time1.diff(time2, 'minutes').minutes);
+
+          if (diffMinutes <= 50) {
+            duplicates.push({
+              id1, id2,
+              p1, p2,
+              diffMinutes
+            });
+          }
+        }
+      }
+    }
+
+    if (duplicates.length === 0) {
+      return bot.sendMessage(chatId, "✅ No duplicate registrations found within 50 minutes.");
+    }
+
+    // Send each duplicate with delete button
+    for (const dup of duplicates) {
+      const msgText =
+        `⚠ *Duplicate Registration Found*\n\n` +
+        `Name: ${dup.p1.name}\nPhone: ${dup.p1.phone}\nTime gap: ${dup.diffMinutes.toFixed(1)} min\n\n` +
+        `1️⃣ ID: \`${dup.id1}\`\nTimestamp: ${dup.p1.timestamp}\nRoom: ${dup.p1.selectedRoom}\n\n` +
+        `2️⃣ ID: \`${dup.id2}\`\nTimestamp: ${dup.p2.timestamp}\nRoom: ${dup.p2.selectedRoom}`;
+
+      await bot.sendMessage(chatId, msgText, {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: `🗑 Delete 1️⃣`, callback_data: `delete_payment:${dup.id1}` },
+              { text: `🗑 Delete 2️⃣`, callback_data: `delete_payment:${dup.id2}` }
+            ]
+          ]
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error("Error checking for duplicates:", error);
+    bot.sendMessage(chatId, "❌ Error while checking for duplicates.");
+  }
+});
+
+
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.data;
+
+  if (data.startsWith("delete_payment:")) {
+    const paymentId = data.split(":")[1];
+    try {
+      await database.ref(`Payments/${paymentId}`).remove();
+      await bot.sendMessage(chatId, `✅ Payment with ID \`${paymentId}\` deleted.`, { parse_mode: "Markdown" });
+    } catch (err) {
+      console.error("Delete error:", err);
+      await bot.sendMessage(chatId, "❌ Failed to delete payment.");
+    }
+  }
+});
