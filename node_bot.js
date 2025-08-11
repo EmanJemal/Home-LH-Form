@@ -1039,7 +1039,7 @@ bot.onText(/^\/check$/, async (msg) => {
     
 
     if (duplicates.length === 0) {
-      return bot.sendMessage(chatId, "✅ No duplicate registrations found within 50 minutes.");
+      return bot.sendMessage(chatId, "✅ No duplicate registrations found.");
     }
 
     // Send each duplicate with delete button
