@@ -1002,26 +1002,39 @@ bot.onText(/^\/check$/, async (msg) => {
     // Compare each record with every other record
     for (let i = 0; i < payments.length; i++) {
       const [id1, p1] = payments[i];
-      const time1 = DateTime.fromFormat(p1.timestamp, "MMMM d, yyyy 'at' hh:mm:ss a", { zone: 'utc' });
-      
+      if (!p1.timestamp) continue; // Skip if no timestamp
+    
+      const time1 = DateTime.fromFormat(
+        p1.timestamp,
+        "MMMM d, yyyy 'at' hh:mm:ss a",
+        { zone: 'utc' }
+      );
+      if (!time1.isValid) continue; // Skip if parsing failed
+    
       for (let j = i + 1; j < payments.length; j++) {
         const [id2, p2] = payments[j];
-        if (p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase() &&
-            p1.phone?.trim() === p2.phone?.trim()) {
-
-          const time2 = DateTime.fromFormat(p2.timestamp, "MMMM d, yyyy 'at' hh:mm:ss a", { zone: 'utc' });
+        if (!p2.timestamp) continue;
+    
+        const time2 = DateTime.fromFormat(
+          p2.timestamp,
+          "MMMM d, yyyy 'at' hh:mm:ss a",
+          { zone: 'utc' }
+        );
+        if (!time2.isValid) continue;
+    
+        // Compare name + phone
+        if (
+          p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase() &&
+          p1.phone?.trim() === p2.phone?.trim()
+        ) {
           const diffMinutes = Math.abs(time1.diff(time2, 'minutes').minutes);
-
           if (diffMinutes <= 50) {
-            duplicates.push({
-              id1, id2,
-              p1, p2,
-              diffMinutes
-            });
+            duplicates.push({ id1, id2, p1, p2, diffMinutes });
           }
         }
       }
     }
+    
 
     if (duplicates.length === 0) {
       return bot.sendMessage(chatId, "✅ No duplicate registrations found within 50 minutes.");
