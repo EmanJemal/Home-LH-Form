@@ -980,37 +980,53 @@ const data = snapshot.val();
 
   bot.sendMessage(chatId, `🕒 Latest 5 Active Timers:\n\n${message}`);
 });
-
 bot.onText(/^\/check$/, async (msg) => {
   const chatId = msg.chat.id;
+  console.log("📌 /check triggered by chatId:", chatId);
 
+  // Debug: allowed users
+  console.log("Allowed users:", allowedUsers);
   if (!allowedUsers.includes(chatId)) {
+    console.log("❌ User not authorized");
     return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
   }
 
   try {
-    // Load all data in parallel
+    bot.sendMessage(chatId, "🔍 Running checks, please wait...");
+
+    // Load data in parallel
     const [paymentsSnap, customersSnap, roomsSnap] = await Promise.all([
       database.ref('Payments').once('value'),
       database.ref('customers').once('value'),
       database.ref('rooms').once('value')
     ]);
 
+    console.log("Payments exists:", paymentsSnap.exists());
+    console.log("Customers exists:", customersSnap.exists());
+    console.log("Rooms exists:", roomsSnap.exists());
+
     // -------------------- DUPLICATE CHECK --------------------
+    const duplicates = [];
     if (paymentsSnap.exists()) {
       const payments = Object.entries(paymentsSnap.val());
-      const duplicates = [];
+      console.log("Total payments found:", payments.length);
 
       for (let i = 0; i < payments.length; i++) {
         const [id1, p1] = payments[i];
-        if (!p1.timestamp) continue;
+        if (!p1.timestamp) {
+          console.log(`Payment ${id1} skipped (no timestamp)`);
+          continue;
+        }
 
         const time1 = DateTime.fromFormat(
           p1.timestamp,
           "MMMM d, yyyy 'at' hh:mm:ss a",
           { zone: 'utc' }
         );
-        if (!time1.isValid) continue;
+        if (!time1.isValid) {
+          console.log(`Payment ${id1} skipped (invalid time)`);
+          continue;
+        }
 
         for (let j = i + 1; j < payments.length; j++) {
           const [id2, p2] = payments[j];
@@ -1031,10 +1047,17 @@ bot.onText(/^\/check$/, async (msg) => {
             const diffMinutes = Math.abs(time1.diff(time2, 'minutes').minutes);
 
             if (diffMinutes <= 50) {
+              console.log(`Duplicate found: ${id1} & ${id2}`);
               duplicates.push({ id1, id2, p1, p2, diffMinutes });
             }
           }
         }
+      }
+
+      if (duplicates.length > 0) {
+        bot.sendMessage(chatId, `⚠ Found ${duplicates.length} possible duplicate(s).`);
+      } else {
+        bot.sendMessage(chatId, "✅ No duplicates found in /Payments.");
       }
 
       for (const dup of duplicates) {
@@ -1063,11 +1086,18 @@ bot.onText(/^\/check$/, async (msg) => {
       const rooms = roomsSnap.val() || {};
       const customers = customersSnap.val() || {};
 
-      const bookedRooms = Object.keys(rooms).filter(r => rooms[r] === "booked");
+      console.log("Rooms data:", rooms);
+      console.log("Customers data:", customers);
+
+      const bookedRooms = Object.keys(rooms).filter(r => rooms[r] === "booked").map(String);
       const customerRooms = Object.values(customers).map(c => String(c.selectedRoom));
 
-      // 1) Booked in /rooms but not in /customers
+      console.log("Booked rooms in /rooms:", bookedRooms);
+      console.log("Rooms from /customers:", customerRooms);
+
       const bookedNotInCustomers = bookedRooms.filter(r => !customerRooms.includes(r));
+      console.log("Booked in /rooms but not in /customers:", bookedNotInCustomers);
+
       for (const roomNum of bookedNotInCustomers) {
         await bot.sendMessage(chatId, `⚠ Room ${roomNum} is booked in /rooms but not in /customers.`, {
           reply_markup: {
@@ -1078,8 +1108,9 @@ bot.onText(/^\/check$/, async (msg) => {
         });
       }
 
-      // 2) In /customers but not booked in /rooms
       const customersNotInRooms = customerRooms.filter(r => !bookedRooms.includes(r));
+      console.log("In /customers but not booked in /rooms:", customersNotInRooms);
+
       for (const roomNum of customersNotInRooms) {
         await bot.sendMessage(chatId, `⚠ Room ${roomNum} is in /customers but not in /rooms.`, {
           reply_markup: {
@@ -1089,51 +1120,19 @@ bot.onText(/^\/check$/, async (msg) => {
           }
         });
       }
+
+      if (bookedNotInCustomers.length === 0 && customersNotInRooms.length === 0) {
+        bot.sendMessage(chatId, "✅ No room mismatches found.");
+      }
+    }
+
+    if (duplicates.length === 0) {
+      console.log("No duplicates found.");
     }
 
   } catch (error) {
     console.error("Error during check:", error);
     bot.sendMessage(chatId, "❌ Error while performing the check.");
-  }
-});
-
-
-// -------------------- CALLBACK HANDLERS --------------------
-bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const data = query.data;
-
-  if (data.startsWith("delete_payment:")) {
-    const paymentId = data.split(":")[1];
-    try {
-      await database.ref(`Payments/${paymentId}`).remove();
-      await bot.sendMessage(chatId, `✅ Payment with ID \`${paymentId}\` deleted.`, { parse_mode: "Markdown" });
-    } catch (err) {
-      console.error("Delete error:", err);
-      await bot.sendMessage(chatId, "❌ Failed to delete payment.");
-    }
-  }
-
-  if (data.startsWith("remove_room:")) {
-    const roomNum = data.split(":")[1];
-    try {
-      await database.ref(`rooms/${roomNum}`).remove();
-      await bot.sendMessage(chatId, `✅ Room ${roomNum} removed from /rooms.`);
-    } catch (err) {
-      console.error("Remove room error:", err);
-      await bot.sendMessage(chatId, "❌ Failed to remove room.");
-    }
-  }
-
-  if (data.startsWith("add_room:")) {
-    const roomNum = data.split(":")[1];
-    try {
-      await database.ref(`rooms/${roomNum}`).set("booked");
-      await bot.sendMessage(chatId, `✅ Room ${roomNum} added to /rooms as booked.`);
-    } catch (err) {
-      console.error("Add room error:", err);
-      await bot.sendMessage(chatId, "❌ Failed to add room.");
-    }
   }
 });
 
