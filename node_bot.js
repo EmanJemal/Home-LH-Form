@@ -981,95 +981,124 @@ const data = snapshot.val();
   bot.sendMessage(chatId, `🕒 Latest 5 Active Timers:\n\n${message}`);
 });
 
-
 bot.onText(/^\/check$/, async (msg) => {
   const chatId = msg.chat.id;
 
-  // Only allow main admin or specific person
   if (!allowedUsers.includes(chatId)) {
     return bot.sendMessage(chatId, "❌ You are not authorized to use this command.");
   }
 
   try {
-    const snapshot = await database.ref('Payments').once('value');
-    if (!snapshot.exists()) {
-      return bot.sendMessage(chatId, "✅ No payments found.");
-    }
+    // Load all data in parallel
+    const [paymentsSnap, customersSnap, roomsSnap] = await Promise.all([
+      database.ref('Payments').once('value'),
+      database.ref('customers').once('value'),
+      database.ref('rooms').once('value')
+    ]);
 
-    const payments = Object.entries(snapshot.val());
-    const duplicates = [];
+    // -------------------- DUPLICATE CHECK --------------------
+    if (paymentsSnap.exists()) {
+      const payments = Object.entries(paymentsSnap.val());
+      const duplicates = [];
 
-    // Compare each record with every other record
-    for (let i = 0; i < payments.length; i++) {
-      const [id1, p1] = payments[i];
-      if (!p1.timestamp) continue;
-    
-      const time1 = DateTime.fromFormat(
-        p1.timestamp,
-        "MMMM d, yyyy 'at' hh:mm:ss a",
-        { zone: 'utc' }
-      );
-      if (!time1.isValid) continue;
-    
-      for (let j = i + 1; j < payments.length; j++) {
-        const [id2, p2] = payments[j];
-        if (!p2.timestamp) continue;
-    
-        const time2 = DateTime.fromFormat(
-          p2.timestamp,
+      for (let i = 0; i < payments.length; i++) {
+        const [id1, p1] = payments[i];
+        if (!p1.timestamp) continue;
+
+        const time1 = DateTime.fromFormat(
+          p1.timestamp,
           "MMMM d, yyyy 'at' hh:mm:ss a",
           { zone: 'utc' }
         );
-        if (!time2.isValid) continue;
-    
-        // ✅ Check same name, phone, and room
-        if (
-          p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase() &&
-          p1.phone?.trim() === p2.phone?.trim() &&
-          p1.selectedRoom?.trim() === p2.selectedRoom?.trim()
-        ) {
-          const diffMinutes = Math.abs(time1.diff(time2, 'minutes').minutes);
-    
-          if (diffMinutes <= 50) {
-            duplicates.push({ id1, id2, p1, p2, diffMinutes });
+        if (!time1.isValid) continue;
+
+        for (let j = i + 1; j < payments.length; j++) {
+          const [id2, p2] = payments[j];
+          if (!p2.timestamp) continue;
+
+          const time2 = DateTime.fromFormat(
+            p2.timestamp,
+            "MMMM d, yyyy 'at' hh:mm:ss a",
+            { zone: 'utc' }
+          );
+          if (!time2.isValid) continue;
+
+          if (
+            p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase() &&
+            p1.phone?.trim() === p2.phone?.trim() &&
+            p1.selectedRoom?.trim() === p2.selectedRoom?.trim()
+          ) {
+            const diffMinutes = Math.abs(time1.diff(time2, 'minutes').minutes);
+
+            if (diffMinutes <= 50) {
+              duplicates.push({ id1, id2, p1, p2, diffMinutes });
+            }
           }
         }
       }
-    }
-    
 
-    if (duplicates.length === 0) {
-      return bot.sendMessage(chatId, "✅ No duplicate registrations found.");
-    }
+      for (const dup of duplicates) {
+        const msgText =
+          `⚠ *Duplicate Registration Found*\n\n` +
+          `Name: ${dup.p1.name}\nPhone: ${dup.p1.phone}\nTime gap: ${dup.diffMinutes.toFixed(1)} min\n\n` +
+          `1️⃣ ID: \`${dup.id1}\`\nTimestamp: ${dup.p1.timestamp}\nRoom: ${dup.p1.selectedRoom}\n\n` +
+          `2️⃣ ID: \`${dup.id2}\`\nTimestamp: ${dup.p2.timestamp}\nRoom: ${dup.p2.selectedRoom}`;
 
-    // Send each duplicate with delete button
-    for (const dup of duplicates) {
-      const msgText =
-        `⚠ *Duplicate Registration Found*\n\n` +
-        `Name: ${dup.p1.name}\nPhone: ${dup.p1.phone}\nTime gap: ${dup.diffMinutes.toFixed(1)} min\n\n` +
-        `1️⃣ ID: \`${dup.id1}\`\nTimestamp: ${dup.p1.timestamp}\nRoom: ${dup.p1.selectedRoom}\n\n` +
-        `2️⃣ ID: \`${dup.id2}\`\nTimestamp: ${dup.p2.timestamp}\nRoom: ${dup.p2.selectedRoom}`;
-
-      await bot.sendMessage(chatId, msgText, {
-        parse_mode: "Markdown",
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: `🗑 Delete 1️⃣`, callback_data: `delete_payment:${dup.id1}` },
-              { text: `🗑 Delete 2️⃣`, callback_data: `delete_payment:${dup.id2}` }
+        await bot.sendMessage(chatId, msgText, {
+          parse_mode: "Markdown",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: `🗑 Delete 1️⃣`, callback_data: `delete_payment:${dup.id1}` },
+                { text: `🗑 Delete 2️⃣`, callback_data: `delete_payment:${dup.id2}` }
+              ]
             ]
-          ]
-        }
-      });
+          }
+        });
+      }
+    }
+
+    // -------------------- ROOMS VS CUSTOMERS CHECK --------------------
+    if (roomsSnap.exists() || customersSnap.exists()) {
+      const rooms = roomsSnap.val() || {};
+      const customers = customersSnap.val() || {};
+
+      const bookedRooms = Object.keys(rooms).filter(r => rooms[r] === "booked");
+      const customerRooms = Object.values(customers).map(c => String(c.selectedRoom));
+
+      // 1) Booked in /rooms but not in /customers
+      const bookedNotInCustomers = bookedRooms.filter(r => !customerRooms.includes(r));
+      for (const roomNum of bookedNotInCustomers) {
+        await bot.sendMessage(chatId, `⚠ Room ${roomNum} is booked in /rooms but not in /customers.`, {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: `❌ Remove the room booked (${roomNum})`, callback_data: `remove_room:${roomNum}` }]
+            ]
+          }
+        });
+      }
+
+      // 2) In /customers but not booked in /rooms
+      const customersNotInRooms = customerRooms.filter(r => !bookedRooms.includes(r));
+      for (const roomNum of customersNotInRooms) {
+        await bot.sendMessage(chatId, `⚠ Room ${roomNum} is in /customers but not in /rooms.`, {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: `✅ Add the room as booked (${roomNum})`, callback_data: `add_room:${roomNum}` }]
+            ]
+          }
+        });
+      }
     }
 
   } catch (error) {
-    console.error("Error checking for duplicates:", error);
-    bot.sendMessage(chatId, "❌ Error while checking for duplicates.");
+    console.error("Error during check:", error);
+    bot.sendMessage(chatId, "❌ Error while performing the check.");
   }
 });
 
 
+// -------------------- CALLBACK HANDLERS --------------------
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
@@ -1084,4 +1113,27 @@ bot.on('callback_query', async (query) => {
       await bot.sendMessage(chatId, "❌ Failed to delete payment.");
     }
   }
+
+  if (data.startsWith("remove_room:")) {
+    const roomNum = data.split(":")[1];
+    try {
+      await database.ref(`rooms/${roomNum}`).remove();
+      await bot.sendMessage(chatId, `✅ Room ${roomNum} removed from /rooms.`);
+    } catch (err) {
+      console.error("Remove room error:", err);
+      await bot.sendMessage(chatId, "❌ Failed to remove room.");
+    }
+  }
+
+  if (data.startsWith("add_room:")) {
+    const roomNum = data.split(":")[1];
+    try {
+      await database.ref(`rooms/${roomNum}`).set("booked");
+      await bot.sendMessage(chatId, `✅ Room ${roomNum} added to /rooms as booked.`);
+    } catch (err) {
+      console.error("Add room error:", err);
+      await bot.sendMessage(chatId, "❌ Failed to add room.");
+    }
+  }
 });
+
