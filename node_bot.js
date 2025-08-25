@@ -1136,3 +1136,165 @@ bot.onText(/^\/check$/, async (msg) => {
   }
 });
 
+bot.on("callback_query", async (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.data;
+
+  try {
+    // Handle payment deletion
+    if (data.startsWith("delete_payment:")) {
+      const paymentId = data.split(":")[1];
+
+      await database.ref(`Payments/${paymentId}`).remove();
+
+      await bot.answerCallbackQuery(query.id, { text: `🗑 Payment ${paymentId} deleted.` });
+      await bot.editMessageText(
+        `✅ Payment ${paymentId} was deleted successfully.`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id
+        }
+      );
+    }
+
+    // Handle removing a booked room
+    if (data.startsWith("remove_room:")) {
+      const roomNum = data.split(":")[1];
+
+      await database.ref(`rooms/${roomNum}`).set("available");
+
+      await bot.answerCallbackQuery(query.id, { text: `Room ${roomNum} unbooked.` });
+      await bot.editMessageText(
+        `✅ Room ${roomNum} is now marked as available.`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id
+        }
+      );
+    }
+
+    // Handle adding a booked room
+    if (data.startsWith("add_room:")) {
+      const roomNum = data.split(":")[1];
+
+      await database.ref(`rooms/${roomNum}`).set("booked");
+
+      await bot.answerCallbackQuery(query.id, { text: `Room ${roomNum} booked.` });
+      await bot.editMessageText(
+        `✅ Room ${roomNum} is now marked as booked.`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id
+        }
+      );
+    }
+  } catch (err) {
+    console.error("Callback error:", err);
+    bot.answerCallbackQuery(query.id, { text: "❌ Error performing action." });
+  }
+});
+
+const ARAFAT_ID = 5169578668; // replace with your Telegram ID
+
+async function runChecks(chatId) {
+  try {
+    const [paymentsSnap, customersSnap, roomsSnap] = await Promise.all([
+      database.ref('Payments').once('value'),
+      database.ref('customers').once('value'),
+      database.ref('rooms').once('value')
+    ]);
+
+    // -------------------- DUPLICATE CHECK --------------------
+    if (paymentsSnap.exists()) {
+      const payments = Object.entries(paymentsSnap.val());
+      const duplicates = [];
+
+      for (let i = 0; i < payments.length; i++) {
+        const [id1, p1] = payments[i];
+        if (!p1.timestamp) continue;
+
+        const time1 = DateTime.fromFormat(
+          p1.timestamp,
+          "MMMM d, yyyy 'at' hh:mm:ss a",
+          { zone: 'utc' }
+        );
+        if (!time1.isValid) continue;
+
+        for (let j = i + 1; j < payments.length; j++) {
+          const [id2, p2] = payments[j];
+          if (!p2.timestamp) continue;
+
+          const time2 = DateTime.fromFormat(
+            p2.timestamp,
+            "MMMM d, yyyy 'at' hh:mm:ss a",
+            { zone: 'utc' }
+          );
+          if (!time2.isValid) continue;
+
+          if (
+            p1.name?.trim().toLowerCase() === p2.name?.trim().toLowerCase() &&
+            p1.phone?.trim() === p2.phone?.trim() &&
+            p1.selectedRoom?.trim() === p2.selectedRoom?.trim()
+          ) {
+            const diffMinutes = Math.abs(time1.diff(time2, 'minutes').minutes);
+            if (diffMinutes <= 50) {
+              duplicates.push({ id1, id2, p1, p2, diffMinutes });
+            }
+          }
+        }
+      }
+
+      // auto-delete if found
+      if (duplicates.length > 0) {
+        for (const dup of duplicates) {
+          await database.ref(`Payments/${dup.id1}`).remove(); // auto delete first one
+
+          await bot.sendMessage(chatId,
+            `⚠ *Duplicate Auto-Resolved*\n\n` +
+            `Name: ${dup.p1.name}\nPhone: ${dup.p1.phone}\nRoom: ${dup.p1.selectedRoom}\nTime gap: ${dup.diffMinutes.toFixed(1)} min\n\n` +
+            `🗑 Deleted: \`${dup.id1}\`\n✅ Kept: \`${dup.id2}\``,
+            { parse_mode: "Markdown" }
+          );
+        }
+      } else {
+        await bot.sendMessage(chatId, "✅ No duplicates found in /Payments.");
+      }
+    }
+
+    // -------------------- ROOMS VS CUSTOMERS CHECK --------------------
+    if (roomsSnap.exists() || customersSnap.exists()) {
+      const rooms = roomsSnap.val() || {};
+      const customers = customersSnap.val() || {};
+
+      const bookedRooms = Object.keys(rooms).filter(r => rooms[r] === "booked").map(String);
+      const customerRooms = Object.values(customers).map(c => String(c.selectedRoom));
+
+      const bookedNotInCustomers = bookedRooms.filter(r => !customerRooms.includes(r));
+      const customersNotInRooms = customerRooms.filter(r => !bookedRooms.includes(r));
+
+      for (const roomNum of bookedNotInCustomers) {
+        await bot.sendMessage(chatId, `⚠ Room ${roomNum} is booked in /rooms but not in /customers.`);
+      }
+
+      for (const roomNum of customersNotInRooms) {
+        await bot.sendMessage(chatId, `⚠ Room ${roomNum} is in /customers but not in /rooms.`);
+      }
+
+      if (bookedNotInCustomers.length === 0 && customersNotInRooms.length === 0) {
+        await bot.sendMessage(chatId, "✅ No room mismatches found.");
+      }
+    }
+
+  } catch (err) {
+    console.error("Error in runChecks:", err);  
+    bot.sendMessage(chatId, "❌ Error while performing scheduled check.");
+  }
+}
+
+// run every 30 minutes automatically for Arafat
+setInterval(() => {
+  runChecks(ARAFAT_ID);
+}, 30 * 60 * 1000);
+
+// also run immediately when bot starts
+runChecks(ARAFAT_ID);
