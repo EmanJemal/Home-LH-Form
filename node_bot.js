@@ -1294,7 +1294,7 @@ async function runChecks(chatId) {
 // run every 30 minutes automatically for Arafat
 setInterval(() => {
   runChecks(ARAFAT_ID);
-}, 30 * 60 * 1000);
+}, 120 * 60 * 1000);
 
 // also run immediately when bot starts
 runChecks(ARAFAT_ID);
