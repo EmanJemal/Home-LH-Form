@@ -39,15 +39,12 @@ const db = admin.database();
 
 export const database = getDatabase();
 
-const TelegramBot = require('node-telegram-bot-api');
+
 
 // ✅ Correct way:
-const bot = new TelegramBot('8261340375:AAFsxKa2azOm-CWM-tjGz1VHlSA1EnyYdBk', { polling: true });
+const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true };
 
-// Example test
-bot.on('message', (msg) => {
-  bot.sendMessage(msg.chat.id, 'Hey! Your bot is working!');
-});
+
 
 const salesChats = [
   { id: process.env.SALES_1_CHAT_ID, code: '' },
