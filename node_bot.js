@@ -40,9 +40,7 @@ const db = admin.database();
 export const database = getDatabase();
 
 
-
-// ✅ Correct way:
-const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true }
+const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 
 
 
